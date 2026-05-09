@@ -25,6 +25,10 @@ type Gift = {
   image: string;
 };
 
+type GiftResponse = {
+  gifts?: Record<string, string>;
+};
+
 const GOOGLE_SCRIPT_URL =
   'https://script.google.com/macros/s/AKfycbyh-Aeo2tH331m6XWV7xcTrlR9cE0e9hQyDDaAtx1W-TiMlpik4gRk3OOZ7oUVWWbE7/exec';
 
@@ -32,10 +36,6 @@ const GOOGLE_MAPS_URL = 'https://maps.app.goo.gl/L1cr1U27FxV6tqaUA';
 
 const WEDDING_DATE = new Date('2027-01-15T19:00:00');
 const MUSIC_START_TIME = 265;
-
-type GiftResponse = {
-  gifts?: Record<string, string>;
-};
 
 const gifts: Gift[] = [
   {
@@ -310,21 +310,22 @@ export default function WeddingSite() {
 
       if (element) {
         const targetY =
-          element.getBoundingClientRect().top + window.scrollY - 30;
+          element.getBoundingClientRect().top + window.scrollY - 12;
 
-        smoothScrollTo(targetY, 1400);
+        smoothScrollTo(targetY, 1100);
       }
-    }, 200);
+    }, 150);
   }
 
   function goHome() {
     setActiveSection(null);
-    smoothScrollTo(0, 1200);
+    smoothScrollTo(0, 900);
   }
 
   return (
-    <div className="min-h-screen bg-[#f7f3ed] text-[#6d4c2f] font-serif">
+    <div className="min-h-screen bg-[#f7f3ed] text-[#6d4c2f] font-serif overflow-x-hidden">
       <FallingFlowers />
+
       <audio
         ref={audioRef}
         src="/musica.mp3"
@@ -335,42 +336,42 @@ export default function WeddingSite() {
       <button
         type="button"
         onClick={toggleMusic}
-        className="fixed bottom-4 right-4 z-50 bg-white/80 text-[#8a5b2b] border border-white/70 backdrop-blur-md px-4 py-3 rounded-full shadow-lg hover:bg-[#8a5b2b] hover:text-white transition-all text-sm"
+        className="fixed bottom-3 right-3 md:bottom-4 md:right-4 z-50 bg-white/85 text-[#8a5b2b] border border-white/70 backdrop-blur-md px-3 py-2 md:px-4 md:py-3 rounded-full shadow-lg hover:bg-[#8a5b2b] hover:text-white transition-all text-xs md:text-sm"
         aria-label={musicPlaying ? 'Pausar música' : 'Tocar música'}
       >
         {musicPlaying ? '⏸ Música' : '▶ Música'}
       </button>
 
-      <section className="relative min-h-screen flex items-center justify-center px-6 py-16 overflow-hidden">
+      <section className="relative min-h-screen flex items-center justify-center px-4 sm:px-6 py-10 md:py-16 overflow-hidden">
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{
             backgroundImage:
-              "linear-gradient(rgba(35, 25, 20, 0.45), rgba(35, 25, 20, 0.55)), url('/fundo-site.png')",
+              "linear-gradient(rgba(35, 25, 20, 0.48), rgba(35, 25, 20, 0.58)), url('/fundo-site.png')",
           }}
         />
 
         <div className="absolute inset-0 bg-[#f7efe3]/10 backdrop-blur-[1px]" />
 
         <div className="relative max-w-4xl w-full text-center text-white">
-          <p className="uppercase tracking-[0.45em] text-sm mb-6">
+          <p className="uppercase tracking-[0.22em] sm:tracking-[0.35em] md:tracking-[0.45em] text-[11px] sm:text-xs md:text-sm mb-4 md:mb-6 leading-5">
             Um novo capítulo da nossa história começa
           </p>
 
-          <h1 className="text-6xl md:text-8xl font-serif mb-6 drop-shadow-lg">
+          <h1 className="text-4xl sm:text-5xl md:text-8xl font-serif mb-4 md:mb-6 drop-shadow-lg leading-tight">
             Larissa &amp; Vinicius
           </h1>
 
-          <p className="text-2xl md:text-3xl mb-4 drop-shadow">
+          <p className="text-xl sm:text-2xl md:text-3xl mb-3 md:mb-4 drop-shadow">
             15 de Janeiro de 2027
           </p>
 
-          <p className="max-w-2xl mx-auto text-lg md:text-xl leading-8 mb-12 drop-shadow">
+          <p className="max-w-2xl mx-auto text-base sm:text-lg md:text-xl leading-7 md:leading-8 mb-8 md:mb-12 drop-shadow px-2">
             Estamos muito felizes em compartilhar esse momento especial com
-            vocês...
+            vocês!
           </p>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto mb-12">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 max-w-3xl mx-auto mb-8 md:mb-12">
             {[
               ['Dias', timeLeft.days],
               ['Horas', timeLeft.hours],
@@ -379,17 +380,17 @@ export default function WeddingSite() {
             ].map(([label, value]) => (
               <div
                 key={String(label)}
-                className="bg-white/20 backdrop-blur-md rounded-3xl p-6 border border-white/40 shadow-xl"
+                className="bg-white/20 backdrop-blur-md rounded-2xl md:rounded-3xl p-4 md:p-6 border border-white/40 shadow-xl"
               >
-                <div className="text-4xl font-bold">{value}</div>
-                <div className="uppercase text-sm mt-2 tracking-widest">
+                <div className="text-3xl md:text-4xl font-bold">{value}</div>
+                <div className="uppercase text-[11px] md:text-sm mt-2 tracking-widest">
                   {label}
                 </div>
               </div>
             ))}
           </div>
 
-          <div className="grid md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 max-w-3xl mx-auto">
             <MenuButton onClick={() => openSection('confirmacao')}>
               Confirmar Presença
             </MenuButton>
@@ -411,7 +412,7 @@ export default function WeddingSite() {
 
       {activeSection === 'confirmacao' && (
         <Section id="conteudo" title="Confirmar Presença" onBack={goHome}>
-          <form onSubmit={handleSubmit} className="grid gap-6">
+          <form onSubmit={handleSubmit} className="grid gap-4 md:gap-6">
             <Input
               name="name"
               placeholder="Nome completo"
@@ -461,7 +462,7 @@ export default function WeddingSite() {
             <button
               type="submit"
               disabled={sending}
-              className="bg-[#8a5b2b] hover:bg-[#74491f] disabled:opacity-60 text-white py-4 rounded-2xl shadow-lg text-lg transition-all"
+              className="bg-[#8a5b2b] hover:bg-[#74491f] disabled:opacity-60 text-white py-4 rounded-2xl shadow-lg text-base md:text-lg transition-all"
             >
               {sending ? 'Enviando...' : 'Confirmar Presença'}
             </button>
@@ -472,9 +473,11 @@ export default function WeddingSite() {
       {activeSection === 'local' && (
         <Section id="conteudo" title="Local da Cerimônia" onBack={goHome}>
           <div className="text-center">
-            <p className="text-2xl mb-4">Cerradu&apos;s Festa e Lazer</p>
+            <p className="text-xl md:text-2xl mb-4">
+              Cerradu&apos;s Festa e Lazer
+            </p>
 
-            <p className="text-lg mb-8">
+            <p className="text-base md:text-lg mb-8">
               Clique no botão abaixo para abrir a rota no Google Maps.
             </p>
 
@@ -482,7 +485,7 @@ export default function WeddingSite() {
               href={GOOGLE_MAPS_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-block bg-[#8a5b2b] hover:bg-[#74491f] text-white px-8 py-4 rounded-2xl shadow-lg transition-all"
+              className="inline-block bg-[#8a5b2b] hover:bg-[#74491f] text-white px-6 md:px-8 py-4 rounded-2xl shadow-lg transition-all"
             >
               Abrir no Google Maps
             </a>
@@ -492,24 +495,24 @@ export default function WeddingSite() {
 
       {activeSection === 'presentes' && (
         <Section id="conteudo" title="Lista de Presentes" wide onBack={goHome}>
-          <div className="grid md:grid-cols-2 gap-8">
+          <div className="grid md:grid-cols-2 gap-5 md:gap-8">
             {gifts.map((gift) => {
               const reservedBy = giftReservations[gift.name];
 
               return (
                 <div
                   key={gift.id}
-                  className="border border-[#eadcc7] rounded-[30px] overflow-hidden shadow-lg"
+                  className="border border-[#eadcc7] rounded-[26px] md:rounded-[30px] overflow-hidden shadow-lg bg-white"
                 >
                   <img
                     src={gift.image}
                     alt={gift.name}
-                    className="w-full h-64 object-cover"
+                    className="w-full h-52 md:h-64 object-cover"
                   />
 
-                  <div className="p-6">
-                    <h3 className="text-3xl mb-3">{gift.name}</h3>
-                    <p className="text-xl mb-3">{gift.value}</p>
+                  <div className="p-5 md:p-6">
+                    <h3 className="text-2xl md:text-3xl mb-3">{gift.name}</h3>
+                    <p className="text-lg md:text-xl mb-3">{gift.value}</p>
 
                     {reservedBy ? (
                       <>
@@ -544,7 +547,7 @@ export default function WeddingSite() {
 
       {activeSection === 'historia' && (
         <Section id="conteudo" title="Nossa História" onBack={goHome}>
-          <p className="text-lg leading-9 text-center">
+          <p className="text-base md:text-lg leading-8 md:leading-9 text-center">
             Deus mudou o teu caminho até juntares com o meu e guardou a tua
             vida separando-a para mim. Para onde fores, irei. Onde tu
             repousares, repousarei. Teu Deus será o meu Deus. Teu caminho o meu
@@ -552,6 +555,64 @@ export default function WeddingSite() {
           </p>
         </Section>
       )}
+    </div>
+  );
+}
+
+function FallingFlowers() {
+  const petals = Array.from({ length: 10 });
+
+  return (
+    <div className="pointer-events-none fixed inset-0 z-40 overflow-hidden hidden sm:block">
+      {petals.map((_, index) => (
+        <span
+          key={index}
+          className="absolute block rounded-full animate-[petalFall_20s_linear_infinite]"
+          style={{
+            left: `${(index * 9.5) % 100}%`,
+            top: '-40px',
+            width: `${8 + (index % 4) * 3}px`,
+            height: `${13 + (index % 5) * 3}px`,
+            background:
+              'radial-gradient(circle at 35% 30%, rgba(255,255,255,0.95), rgba(244,179,195,0.65) 45%, rgba(213,122,145,0.35) 100%)',
+            boxShadow: '0 2px 8px rgba(255, 190, 205, 0.22)',
+            opacity: 0.42,
+            transform: `rotate(${index * 23}deg)`,
+            animationDelay: `${index * 1.7}s`,
+            animationDuration: `${18 + (index % 6)}s`,
+          }}
+        />
+      ))}
+
+      <style jsx>{`
+        @keyframes petalFall {
+          0% {
+            transform: translate3d(0, -10vh, 0) rotate(0deg);
+            opacity: 0;
+          }
+
+          12% {
+            opacity: 0.35;
+          }
+
+          40% {
+            transform: translate3d(25px, 35vh, 0) rotate(90deg);
+          }
+
+          70% {
+            transform: translate3d(-18px, 70vh, 0) rotate(180deg);
+          }
+
+          90% {
+            opacity: 0.3;
+          }
+
+          100% {
+            transform: translate3d(16px, 110vh, 0) rotate(260deg);
+            opacity: 0;
+          }
+        }
+      `}</style>
     </div>
   );
 }
@@ -566,7 +627,7 @@ function MenuButton({ children, onClick }: MenuButtonProps) {
     <button
       type="button"
       onClick={onClick}
-      className="bg-white/90 text-[#8a5b2b] border border-white/70 hover:bg-[#8a5b2b] hover:text-white py-4 rounded-2xl shadow-lg transition-all font-semibold"
+      className="bg-white/90 text-[#8a5b2b] border border-white/70 hover:bg-[#8a5b2b] hover:text-white py-3.5 md:py-4 rounded-2xl shadow-lg transition-all font-semibold text-sm md:text-base"
     >
       {children}
     </button>
@@ -591,11 +652,11 @@ function Section({
   return (
     <section
       id={id}
-      className={`${wide ? 'max-w-6xl' : 'max-w-4xl'} mx-auto px-6 py-20`}
+      className={`${wide ? 'max-w-6xl' : 'max-w-4xl'} mx-auto px-4 md:px-6 py-10 md:py-20`}
     >
-      <div className="bg-white rounded-[40px] p-8 md:p-12 shadow-2xl border border-[#eadcc7]">
-        <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
-          <h2 className="text-4xl text-[#8a5b2b] text-center md:text-left">
+      <div className="bg-white rounded-[28px] md:rounded-[40px] p-5 md:p-12 shadow-2xl border border-[#eadcc7]">
+        <div className="flex flex-col md:flex-row justify-between items-center mb-8 md:mb-10 gap-4">
+          <h2 className="text-3xl md:text-4xl text-[#8a5b2b] text-center md:text-left">
             {title}
           </h2>
 
@@ -603,7 +664,7 @@ function Section({
             <button
               type="button"
               onClick={onBack}
-              className="bg-[#f7efe3] border border-[#caa36d] px-4 py-2 rounded-xl hover:bg-white"
+              className="bg-[#f7efe3] border border-[#caa36d] px-4 py-2 rounded-xl hover:bg-white text-sm md:text-base"
             >
               Voltar ao Início
             </button>
@@ -629,7 +690,7 @@ function Input({ type = 'text', ...props }: InputProps) {
   return (
     <input
       type={type}
-      className="p-4 rounded-2xl border border-[#d9c3a4] outline-none w-full"
+      className="p-4 rounded-2xl border border-[#d9c3a4] outline-none w-full text-base"
       {...props}
     />
   );
@@ -646,66 +707,8 @@ function TextArea(props: TextAreaProps) {
   return (
     <textarea
       rows={4}
-      className="p-4 rounded-2xl border border-[#d9c3a4] outline-none w-full"
+      className="p-4 rounded-2xl border border-[#d9c3a4] outline-none w-full text-base"
       {...props}
     />
-  );
-}
-
-function FallingFlowers() {
-  const petals = Array.from({ length: 18 });
-
-  return (
-    <div className="pointer-events-none fixed inset-0 z-40 overflow-hidden">
-      {petals.map((_, index) => (
-        <span
-          key={index}
-          className="absolute block rounded-full animate-[petalFall_18s_linear_infinite]"
-          style={{
-            left: `${(index * 6.7) % 100}%`,
-            top: '-40px',
-            width: `${10 + (index % 4) * 3}px`,
-            height: `${16 + (index % 5) * 3}px`,
-            background:
-              'radial-gradient(circle at 35% 30%, rgba(255,255,255,0.95), rgba(244,179,195,0.75) 45%, rgba(213,122,145,0.45) 100%)',
-            boxShadow: '0 2px 8px rgba(255, 190, 205, 0.35)',
-            opacity: 0.55,
-            transform: `rotate(${index * 23}deg)`,
-            animationDelay: `${index * 1.4}s`,
-            animationDuration: `${16 + (index % 6)}s`,
-          }}
-        />
-      ))}
-
-      <style jsx>{`
-        @keyframes petalFall {
-          0% {
-            transform: translate3d(0, -10vh, 0) rotate(0deg);
-            opacity: 0;
-          }
-
-          10% {
-            opacity: 0.45;
-          }
-
-          35% {
-            transform: translate3d(35px, 35vh, 0) rotate(90deg);
-          }
-
-          65% {
-            transform: translate3d(-25px, 70vh, 0) rotate(180deg);
-          }
-
-          90% {
-            opacity: 0.4;
-          }
-
-          100% {
-            transform: translate3d(20px, 110vh, 0) rotate(260deg);
-            opacity: 0;
-          }
-        }
-      `}</style>
-    </div>
   );
 }
