@@ -36,6 +36,7 @@ const GOOGLE_MAPS_URL = 'https://maps.app.goo.gl/L1cr1U27FxV6tqaUA';
 
 const WEDDING_DATE = new Date('2027-01-15T19:00:00');
 const MUSIC_START_TIME = 265;
+const PIX_GIFT_NAME = 'Presente via PIX';
 
 const gifts: Gift[] = [
   {
@@ -65,6 +66,12 @@ const gifts: Gift[] = [
     value: 'R$ 250',
     image:
       'https://images.unsplash.com/photo-1622480916113-5d9a8a9d57d5?q=80&w=1200&auto=format&fit=crop',
+  },
+  {
+    id: 5,
+    name: PIX_GIFT_NAME,
+    value: 'Valor livre',
+    image: '/pix.png',
   },
 ];
 
@@ -249,8 +256,12 @@ export default function WeddingSite() {
   }
 
   async function reserveGift(gift: Gift) {
+    const isPix = gift.name === PIX_GIFT_NAME;
+
     const guestName = window.prompt(
-      'Digite seu nome para reservar este presente:'
+      isPix
+        ? 'Digite seu nome para registrar o presente via PIX:'
+        : 'Digite seu nome para reservar este presente:'
     );
 
     if (!guestName || guestName.trim() === '') return;
@@ -267,15 +278,21 @@ export default function WeddingSite() {
         }),
       });
 
-      setGiftReservations((prev) => ({
-        ...prev,
-        [gift.name]: guestName.trim(),
-      }));
+      if (!isPix) {
+        setGiftReservations((prev) => ({
+          ...prev,
+          [gift.name]: guestName.trim(),
+        }));
+      }
 
-      alert(`${guestName.trim()} reservou ${gift.name}.`);
+      alert(
+        isPix
+          ? `Obrigado, ${guestName.trim()}! Seu presente via PIX foi registrado.`
+          : `${guestName.trim()} reservou ${gift.name}.`
+      );
     } catch (error) {
       console.error(error);
-      alert('Erro ao reservar presente.');
+      alert('Erro ao registrar presente.');
     }
   }
 
@@ -497,7 +514,8 @@ export default function WeddingSite() {
         <Section id="conteudo" title="Lista de Presentes" wide onBack={goHome}>
           <div className="grid md:grid-cols-2 gap-5 md:gap-8">
             {gifts.map((gift) => {
-              const reservedBy = giftReservations[gift.name];
+              const isPix = gift.name === PIX_GIFT_NAME;
+              const reservedBy = isPix ? null : giftReservations[gift.name];
 
               return (
                 <div
@@ -507,34 +525,39 @@ export default function WeddingSite() {
                   <img
                     src={gift.image}
                     alt={gift.name}
-                    className="w-full h-52 md:h-64 object-cover"
+                    className={
+                      isPix
+                        ? 'w-full h-52 md:h-64 object-contain bg-white p-8'
+                        : 'w-full h-52 md:h-64 object-cover'
+                    }
                   />
 
                   <div className="p-5 md:p-6">
                     <h3 className="text-2xl md:text-3xl mb-3">{gift.name}</h3>
                     <p className="text-lg md:text-xl mb-3">{gift.value}</p>
 
-                    {reservedBy ? (
-                      <>
-                        <p className="mb-4 text-green-700 font-semibold">
-                          Reservado por {reservedBy}
-                        </p>
+                    {isPix && (
+                      <p className="text-sm md:text-base mb-4 leading-7 text-[#7a5b3a]">
+                        Contribua com qualquer valor via PIX. Essa opção fica
+                        sempre disponível.
+                      </p>
+                    )}
 
-                        <button
-                          type="button"
-                          disabled
-                          className="w-full bg-gray-400 text-white py-3 rounded-2xl cursor-not-allowed"
-                        >
-                          Presente Reservado
-                        </button>
-                      </>
+                    {reservedBy ? (
+                      <button
+                        type="button"
+                        disabled
+                        className="w-full bg-gray-400 text-white py-3 rounded-2xl cursor-not-allowed"
+                      >
+                        Presente Reservado
+                      </button>
                     ) : (
                       <button
                         type="button"
                         onClick={() => reserveGift(gift)}
                         className="w-full bg-[#8a5b2b] hover:bg-[#74491f] text-white py-3 rounded-2xl transition-all"
                       >
-                        Quero Presentear
+                        {isPix ? 'Presentear via PIX' : 'Quero Presentear'}
                       </button>
                     )}
                   </div>
