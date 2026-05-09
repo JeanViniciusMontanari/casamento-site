@@ -5,6 +5,7 @@ import React, {
   FormEvent,
   ReactNode,
   useEffect,
+  useRef,
   useState,
 } from 'react';
 
@@ -29,8 +30,50 @@ const GOOGLE_SCRIPT_URL =
 
 const GOOGLE_MAPS_URL = 'https://maps.app.goo.gl/L1cr1U27FxV6tqaUA';
 
+const WEDDING_DATE = new Date('2027-01-15T19:00:00');
+const MUSIC_START_TIME = 265;
+
+type GiftResponse = {
+  gifts?: Record<string, string>;
+};
+
+const gifts: Gift[] = [
+  {
+    id: 1,
+    name: 'Air Fryer',
+    value: 'R$ 350',
+    image:
+      'https://images.unsplash.com/photo-1585515656973-8d6f4f5f1c9f?q=80&w=1200&auto=format&fit=crop',
+  },
+  {
+    id: 2,
+    name: 'Jogo de Panelas',
+    value: 'R$ 500',
+    image:
+      'https://images.unsplash.com/photo-1584990347449-ae0f58f5f6b7?q=80&w=1200&auto=format&fit=crop',
+  },
+  {
+    id: 3,
+    name: 'Micro-ondas',
+    value: 'R$ 700',
+    image:
+      'https://images.unsplash.com/photo-1574269909862-7e1d70bb8078?q=80&w=1200&auto=format&fit=crop',
+  },
+  {
+    id: 4,
+    name: 'Liquidificador',
+    value: 'R$ 250',
+    image:
+      'https://images.unsplash.com/photo-1622480916113-5d9a8a9d57d5?q=80&w=1200&auto=format&fit=crop',
+  },
+];
+
 export default function WeddingSite() {
-  const weddingDate = new Date('2027-01-15T19:00:00');
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const [musicPlaying, setMusicPlaying] = useState(false);
+  const [activeSection, setActiveSection] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
 
   const [timeLeft, setTimeLeft] = useState({
     days: 0,
@@ -38,9 +81,6 @@ export default function WeddingSite() {
     minutes: 0,
     seconds: 0,
   });
-
-  const [activeSection, setActiveSection] = useState<string | null>(null);
-  const [sending, setSending] = useState(false);
 
   const [rsvpData, setRsvpData] = useState<RsvpData>({
     name: '',
@@ -55,41 +95,10 @@ export default function WeddingSite() {
     Record<string, string>
   >({});
 
-  const gifts: Gift[] = [
-    {
-      id: 1,
-      name: 'Air Fryer',
-      value: 'R$ 350',
-      image:
-        'https://images.unsplash.com/photo-1585515656973-8d6f4f5f1c9f?q=80&w=1200&auto=format&fit=crop',
-    },
-    {
-      id: 2,
-      name: 'Jogo de Panelas',
-      value: 'R$ 500',
-      image:
-        'https://images.unsplash.com/photo-1584990347449-ae0f58f5f6b7?q=80&w=1200&auto=format&fit=crop',
-    },
-    {
-      id: 3,
-      name: 'Micro-ondas',
-      value: 'R$ 700',
-      image:
-        'https://images.unsplash.com/photo-1574269909862-7e1d70bb8078?q=80&w=1200&auto=format&fit=crop',
-    },
-    {
-      id: 4,
-      name: 'Liquidificador',
-      value: 'R$ 250',
-      image:
-        'https://images.unsplash.com/photo-1622480916113-5d9a8a9d57d5?q=80&w=1200&auto=format&fit=crop',
-    },
-  ];
-
   useEffect(() => {
     const updateCountdown = () => {
       const now = new Date();
-      const difference = weddingDate.getTime() - now.getTime();
+      const difference = WEDDING_DATE.getTime() - now.getTime();
 
       if (difference > 0) {
         setTimeLeft({
@@ -98,14 +107,103 @@ export default function WeddingSite() {
           minutes: Math.floor((difference / 1000 / 60) % 60),
           seconds: Math.floor((difference / 1000) % 60),
         });
+      } else {
+        setTimeLeft({
+          days: 0,
+          hours: 0,
+          minutes: 0,
+          seconds: 0,
+        });
       }
     };
 
+    function loadReservedGifts() {
+      const callbackName = `carregarPresentes_${Date.now()}`;
+      const script = document.createElement('script');
+
+      (window as any)[callbackName] = (data: GiftResponse) => {
+        if (data?.gifts) {
+          setGiftReservations(data.gifts);
+        }
+
+        delete (window as any)[callbackName];
+        script.remove();
+      };
+
+      script.src = `${GOOGLE_SCRIPT_URL}?callback=${callbackName}`;
+      script.async = true;
+
+      script.onerror = () => {
+        console.error('Erro ao carregar presentes reservados.');
+        delete (window as any)[callbackName];
+        script.remove();
+      };
+
+      document.body.appendChild(script);
+
+      return () => {
+        delete (window as any)[callbackName];
+        script.remove();
+      };
+    }
+
     updateCountdown();
+    const removeScript = loadReservedGifts();
+
     const interval = setInterval(updateCountdown, 1000);
 
-    return () => clearInterval(interval);
-  }, [weddingDate]);
+    return () => {
+      clearInterval(interval);
+      removeScript();
+    };
+  }, []);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+
+    if (!audio) return;
+
+    audio.volume = 0.35;
+  }, []);
+
+  async function toggleMusic() {
+    const audio = audioRef.current;
+
+    if (!audio) return;
+
+    try {
+      if (audio.paused) {
+        if (audio.currentTime === 0) {
+          audio.currentTime = MUSIC_START_TIME;
+        }
+
+        await audio.play();
+        setMusicPlaying(true);
+      } else {
+        audio.pause();
+        setMusicPlaying(false);
+      }
+    } catch (error) {
+      console.error('Erro ao tocar música:', error);
+      setMusicPlaying(false);
+    }
+  }
+
+  async function restartMusicFromSelectedTime() {
+    const audio = audioRef.current;
+
+    if (!audio) return;
+
+    audio.currentTime = MUSIC_START_TIME;
+
+    try {
+      await audio.play();
+      setMusicPlaying(true);
+    } catch (error) {
+      console.error('Erro ao reiniciar música:', error);
+      setMusicPlaying(false);
+    }
+  }
 
   function handleChange(
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -181,86 +279,138 @@ export default function WeddingSite() {
     }
   }
 
+  function smoothScrollTo(targetY: number, duration: number) {
+    const startY = window.scrollY;
+    const difference = targetY - startY;
+    const startTime = performance.now();
+
+    function step(currentTime: number) {
+      const progress = Math.min((currentTime - startTime) / duration, 1);
+
+      const ease =
+        progress < 0.5
+          ? 4 * progress * progress * progress
+          : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+
+      window.scrollTo(0, startY + difference * ease);
+
+      if (progress < 1) {
+        requestAnimationFrame(step);
+      }
+    }
+
+    requestAnimationFrame(step);
+  }
+
+  function openSection(section: string) {
+    setActiveSection(section);
+
+    setTimeout(() => {
+      const element = document.getElementById('conteudo');
+
+      if (element) {
+        const targetY =
+          element.getBoundingClientRect().top + window.scrollY - 30;
+
+        smoothScrollTo(targetY, 1400);
+      }
+    }, 200);
+  }
+
   function goHome() {
     setActiveSection(null);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    smoothScrollTo(0, 1200);
   }
 
   return (
     <div className="min-h-screen bg-[#f7f3ed] text-[#6d4c2f] font-serif">
-      <section className="relative overflow-hidden min-h-screen flex items-center justify-center px-6 py-16">
-        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1511285560929-80b456fea0bc?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-20" />
+      <FallingFlowers />
+      <audio
+        ref={audioRef}
+        src="/musica.mp3"
+        preload="auto"
+        onEnded={restartMusicFromSelectedTime}
+      />
 
-        <div className="relative max-w-5xl w-full text-center">
-          <div className="bg-white/80 backdrop-blur-md rounded-[40px] shadow-2xl p-8 md:p-14 border border-[#d8b98a]">
-            <div className="w-52 h-52 mx-auto rounded-full overflow-hidden border-4 border-[#b48b56] shadow-xl mb-8">
-              <img
-                src="https://images.unsplash.com/photo-1520854221256-17451cc331bf?q=80&w=1974&auto=format&fit=crop"
-                alt="Noivos"
-                className="w-full h-full object-cover"
-              />
-            </div>
+      <button
+        type="button"
+        onClick={toggleMusic}
+        className="fixed bottom-4 right-4 z-50 bg-white/80 text-[#8a5b2b] border border-white/70 backdrop-blur-md px-4 py-3 rounded-full shadow-lg hover:bg-[#8a5b2b] hover:text-white transition-all text-sm"
+        aria-label={musicPlaying ? 'Pausar música' : 'Tocar música'}
+      >
+        {musicPlaying ? '⏸ Música' : '▶ Música'}
+      </button>
 
-            <p className="uppercase tracking-[0.3em] text-sm text-[#9c7a4f] mb-4">
-              Nosso Casamento
-            </p>
+      <section className="relative min-h-screen flex items-center justify-center px-6 py-16 overflow-hidden">
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(35, 25, 20, 0.45), rgba(35, 25, 20, 0.55)), url('/fundo-site.png')",
+          }}
+        />
 
-            <h1 className="text-5xl md:text-7xl text-[#8a5b2b] mb-4">
-              Larissa &amp; Vinicius
-            </h1>
+        <div className="absolute inset-0 bg-[#f7efe3]/10 backdrop-blur-[1px]" />
 
-            <p className="text-xl md:text-2xl mb-6">15 de Janeiro de 2027</p>
+        <div className="relative max-w-4xl w-full text-center text-white">
+          <p className="uppercase tracking-[0.45em] text-sm mb-6">
+            Um novo capítulo da nossa história começa
+          </p>
 
-            <p className="max-w-2xl mx-auto text-lg leading-8 mb-10">
-              Estamos muito felizes em compartilhar esse momento especial com
-              vocês.
-            </p>
+          <h1 className="text-6xl md:text-8xl font-serif mb-6 drop-shadow-lg">
+            Larissa &amp; Vinicius
+          </h1>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto mb-12">
-              {[
-                ['Dias', timeLeft.days],
-                ['Horas', timeLeft.hours],
-                ['Minutos', timeLeft.minutes],
-                ['Segundos', timeLeft.seconds],
-              ].map(([label, value]) => (
-                <div
-                  key={String(label)}
-                  className="bg-white rounded-3xl p-6 shadow-lg border border-[#eadcc7]"
-                >
-                  <div className="text-4xl font-bold">{value}</div>
-                  <div className="uppercase text-sm mt-2 tracking-widest">
-                    {label}
-                  </div>
-                </div>
-              ))}
-            </div>
+          <p className="text-2xl md:text-3xl mb-4 drop-shadow">
+            15 de Janeiro de 2027
+          </p>
 
-            <div className="grid md:grid-cols-4 gap-4">
-              <MenuButton
-                filled
-                onClick={() => setActiveSection('confirmacao')}
+          <p className="max-w-2xl mx-auto text-lg md:text-xl leading-8 mb-12 drop-shadow">
+            Estamos muito felizes em compartilhar esse momento especial com
+            vocês...
+          </p>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto mb-12">
+            {[
+              ['Dias', timeLeft.days],
+              ['Horas', timeLeft.hours],
+              ['Minutos', timeLeft.minutes],
+              ['Segundos', timeLeft.seconds],
+            ].map(([label, value]) => (
+              <div
+                key={String(label)}
+                className="bg-white/20 backdrop-blur-md rounded-3xl p-6 border border-white/40 shadow-xl"
               >
-                Confirmar Presença
-              </MenuButton>
+                <div className="text-4xl font-bold">{value}</div>
+                <div className="uppercase text-sm mt-2 tracking-widest">
+                  {label}
+                </div>
+              </div>
+            ))}
+          </div>
 
-              <MenuButton onClick={() => setActiveSection('local')}>
-                Local
-              </MenuButton>
+          <div className="grid md:grid-cols-4 gap-4">
+            <MenuButton onClick={() => openSection('confirmacao')}>
+              Confirmar Presença
+            </MenuButton>
 
-              <MenuButton onClick={() => setActiveSection('presentes')}>
-                Presentes
-              </MenuButton>
+            <MenuButton onClick={() => openSection('local')}>
+              Local
+            </MenuButton>
 
-              <MenuButton onClick={() => setActiveSection('historia')}>
-                Nossa História
-              </MenuButton>
-            </div>
+            <MenuButton onClick={() => openSection('presentes')}>
+              Presentes
+            </MenuButton>
+
+            <MenuButton onClick={() => openSection('historia')}>
+              Nossa História
+            </MenuButton>
           </div>
         </div>
       </section>
 
       {activeSection === 'confirmacao' && (
-        <Section title="Confirmar Presença" onBack={goHome}>
+        <Section id="conteudo" title="Confirmar Presença" onBack={goHome}>
           <form onSubmit={handleSubmit} className="grid gap-6">
             <Input
               name="name"
@@ -320,9 +470,10 @@ export default function WeddingSite() {
       )}
 
       {activeSection === 'local' && (
-        <Section title="Local da Cerimônia" onBack={goHome}>
+        <Section id="conteudo" title="Local da Cerimônia" onBack={goHome}>
           <div className="text-center">
             <p className="text-2xl mb-4">Cerradu&apos;s Festa e Lazer</p>
+
             <p className="text-lg mb-8">
               Clique no botão abaixo para abrir a rota no Google Maps.
             </p>
@@ -340,7 +491,7 @@ export default function WeddingSite() {
       )}
 
       {activeSection === 'presentes' && (
-        <Section title="Lista de Presentes" wide onBack={goHome}>
+        <Section id="conteudo" title="Lista de Presentes" wide onBack={goHome}>
           <div className="grid md:grid-cols-2 gap-8">
             {gifts.map((gift) => {
               const reservedBy = giftReservations[gift.name];
@@ -392,7 +543,7 @@ export default function WeddingSite() {
       )}
 
       {activeSection === 'historia' && (
-        <Section title="Nossa História" onBack={goHome}>
+        <Section id="conteudo" title="Nossa História" onBack={goHome}>
           <p className="text-lg leading-9 text-center">
             Deus mudou o teu caminho até juntares com o meu e guardou a tua
             vida separando-a para mim. Para onde fores, irei. Onde tu
@@ -408,23 +559,14 @@ export default function WeddingSite() {
 type MenuButtonProps = {
   children: ReactNode;
   onClick: () => void;
-  filled?: boolean;
 };
 
-function MenuButton({
-  children,
-  onClick,
-  filled = false,
-}: MenuButtonProps) {
+function MenuButton({ children, onClick }: MenuButtonProps) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={
-        filled
-          ? 'bg-[#8a5b2b] hover:bg-[#74491f] text-white py-4 rounded-2xl shadow-lg transition-all'
-          : 'bg-white border border-[#caa36d] py-4 rounded-2xl shadow-lg hover:bg-[#f7efe3] transition-all'
-      }
+      className="bg-white/90 text-[#8a5b2b] border border-white/70 hover:bg-[#8a5b2b] hover:text-white py-4 rounded-2xl shadow-lg transition-all font-semibold"
     >
       {children}
     </button>
@@ -432,6 +574,7 @@ function MenuButton({
 }
 
 type SectionProps = {
+  id?: string;
   title: string;
   children: ReactNode;
   wide?: boolean;
@@ -439,6 +582,7 @@ type SectionProps = {
 };
 
 function Section({
+  id,
   title,
   children,
   wide = false,
@@ -446,6 +590,7 @@ function Section({
 }: SectionProps) {
   return (
     <section
+      id={id}
       className={`${wide ? 'max-w-6xl' : 'max-w-4xl'} mx-auto px-6 py-20`}
     >
       <div className="bg-white rounded-[40px] p-8 md:p-12 shadow-2xl border border-[#eadcc7]">
@@ -504,5 +649,63 @@ function TextArea(props: TextAreaProps) {
       className="p-4 rounded-2xl border border-[#d9c3a4] outline-none w-full"
       {...props}
     />
+  );
+}
+
+function FallingFlowers() {
+  const petals = Array.from({ length: 18 });
+
+  return (
+    <div className="pointer-events-none fixed inset-0 z-40 overflow-hidden">
+      {petals.map((_, index) => (
+        <span
+          key={index}
+          className="absolute block rounded-full animate-[petalFall_18s_linear_infinite]"
+          style={{
+            left: `${(index * 6.7) % 100}%`,
+            top: '-40px',
+            width: `${10 + (index % 4) * 3}px`,
+            height: `${16 + (index % 5) * 3}px`,
+            background:
+              'radial-gradient(circle at 35% 30%, rgba(255,255,255,0.95), rgba(244,179,195,0.75) 45%, rgba(213,122,145,0.45) 100%)',
+            boxShadow: '0 2px 8px rgba(255, 190, 205, 0.35)',
+            opacity: 0.55,
+            transform: `rotate(${index * 23}deg)`,
+            animationDelay: `${index * 1.4}s`,
+            animationDuration: `${16 + (index % 6)}s`,
+          }}
+        />
+      ))}
+
+      <style jsx>{`
+        @keyframes petalFall {
+          0% {
+            transform: translate3d(0, -10vh, 0) rotate(0deg);
+            opacity: 0;
+          }
+
+          10% {
+            opacity: 0.45;
+          }
+
+          35% {
+            transform: translate3d(35px, 35vh, 0) rotate(90deg);
+          }
+
+          65% {
+            transform: translate3d(-25px, 70vh, 0) rotate(180deg);
+          }
+
+          90% {
+            opacity: 0.4;
+          }
+
+          100% {
+            transform: translate3d(20px, 110vh, 0) rotate(260deg);
+            opacity: 0;
+          }
+        }
+      `}</style>
+    </div>
   );
 }
