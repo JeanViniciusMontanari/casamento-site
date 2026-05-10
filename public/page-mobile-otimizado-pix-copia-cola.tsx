@@ -1136,32 +1136,10 @@ export default function WeddingSite() {
       <button
         type="button"
         onClick={toggleMusic}
-        className="fixed bottom-5 right-4 md:bottom-4 md:right-4 z-50 bg-white/90 text-[#8a5b2b] border border-[#e6d3ba] backdrop-blur-md px-4 py-2.5 rounded-full shadow-lg hover:bg-[#8a5b2b] hover:text-white transition-all text-sm font-medium"
+        className="fixed bottom-3 right-3 md:bottom-4 md:right-4 z-50 bg-white/85 text-[#8a5b2b] border border-white/70 backdrop-blur-md px-3 py-2 md:px-4 md:py-3 rounded-full shadow-lg hover:bg-[#8a5b2b] hover:text-white transition-all text-xs md:text-sm"
         aria-label={musicPlaying ? 'Pausar música' : 'Tocar música'}
       >
-        <div className="flex items-center gap-2">
-          {musicPlaying ? (
-            <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            className="w-4 h-4"
-          >
-            <path d="M8 5h3v14H8zm5 0h3v14h-3z" />
-          </svg>
-        ) : (
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            className="w-4 h-4 ml-[2px]"
-          >
-          <path d="M8 5v14l11-7z" />
-          </svg>
-        )}
-
-  <span>Música</span>
-</div>
+        {musicPlaying ? '⏸ Música' : '▶ Música'}
       </button>
 
       {showPixModal && (
@@ -1230,10 +1208,6 @@ export default function WeddingSite() {
 
           <p className="text-xl sm:text-2xl md:text-3xl mb-3 md:mb-4 drop-shadow">
             15 de Janeiro de 2027
-          </p>
-
-          <p className="max-w-2xl mx-auto text-base sm:text-lg md:text-xl leading-7 md:leading-8 mb-8 md:mb-12 drop-shadow px-2">
-            17:00 H
           </p>
 
           <p className="max-w-2xl mx-auto text-base sm:text-lg md:text-xl leading-7 md:leading-8 mb-8 md:mb-12 drop-shadow px-2">
