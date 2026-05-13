@@ -32,6 +32,8 @@ type GiftResponse = {
 };
 
 type GiftFilter = "todos" | "disponiveis" | "reservados";
+type GiftSort = "relevancia" | "menor-preco" | "maior-preco" | "az";
+type GiftCategory = "todas" | "pix" | "cozinha" | "eletro" | "banho" | "decoracao" | "organizacao";
 
 type Feedback = {
   type: "success" | "error";
@@ -51,6 +53,8 @@ const GOOGLE_MAPS_URL = "https://maps.app.goo.gl/L1cr1U27FxV6tqaUA";
 
 const WEDDING_DATE = new Date("2027-01-15T19:00:00");
 const MUSIC_START_TIME = 265;
+const VIDEO_PLAYBACK_RATE = 0.55; // 1 = normal | 0.7 = lento | 0.55 = cinematográfico | 0.35 = ultra lento
+const GOOGLE_MAPS_QR_CODE = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(GOOGLE_MAPS_URL)}`;
 
 const PIX_GIFT_NAME = "Presente via PIX";
 const PIX_KEY = "05545294163";
@@ -87,6 +91,53 @@ function formatPhone(value: string) {
   }
 
   return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7)}`;
+}
+
+
+function removeAccents(text: string) {
+  return text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9 ]/g, "");
+}
+
+function parseGiftPrice(value: string) {
+  const numeric = value
+    .replace(/R\$/g, "")
+    .replace(/\s/g, "")
+    .replace(/\./g, "")
+    .replace(",", ".");
+
+  const price = Number(numeric);
+  return Number.isFinite(price) ? price : 0;
+}
+
+function getGiftCategory(gift: Gift): GiftCategory {
+  const name = removeAccents(gift.name).toLowerCase();
+
+  if (gift.name === PIX_GIFT_NAME) return "pix";
+
+  if (
+    /toalha|travesseiro|banheiro|algodao|cotonete/.test(name)
+  ) {
+    return "banho";
+  }
+
+  if (
+    /aspirador|grill|sanduicheira|panela de arroz|liquidificador|forno|mixer|chaleira eletrica|torradeira|batedeira|processador|passadeira/.test(name)
+  ) {
+    return "eletro";
+  }
+
+  if (/abajur|bandeja|prato de bolo|jantar|tacas|xicaras|jarra|aparelho|americano/.test(name)) {
+    return "decoracao";
+  }
+
+  if (/organizador|cesto|porta talheres|pote|lixeira|varal/.test(name)) {
+    return "organizacao";
+  }
+
+  return "cozinha";
 }
 
 const gifts: Gift[] = [
@@ -788,6 +839,7 @@ const gifts: Gift[] = [
 
 export default function WeddingSite() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
 
   const [musicPlaying, setMusicPlaying] = useState(false);
   const [activeSection, setActiveSection] = useState<string | null>(null);
@@ -820,6 +872,9 @@ export default function WeddingSite() {
   const [rsvpConfirmation, setRsvpConfirmation] = useState<RsvpConfirmation>(null);
   const [giftSearch, setGiftSearch] = useState("");
   const [giftFilter, setGiftFilter] = useState<GiftFilter>("todos");
+  const [giftSort, setGiftSort] = useState<GiftSort>("relevancia");
+  const [giftCategory, setGiftCategory] = useState<GiftCategory>("todas");
+  const [loadingScreen, setLoadingScreen] = useState(true);
   const [selectedGift, setSelectedGift] = useState<Gift | null>(null);
   const [giftGuestName, setGiftGuestName] = useState("");
   const [giftPixValue, setGiftPixValue] = useState("");
@@ -894,14 +949,27 @@ export default function WeddingSite() {
     audio.volume = 0.35;
   }, []);
 
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    video.playbackRate = VIDEO_PLAYBACK_RATE;
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setLoadingScreen(false), 1450);
+    return () => window.clearTimeout(timer);
+  }, []);
+
   const normalizedGifts = useMemo(() => gifts.map(normalizeGift), []);
 
   const filteredGifts = useMemo(() => {
     const search = removeAccents(giftSearch).toLowerCase().trim();
 
-    return normalizedGifts.filter((gift) => {
+    const result = normalizedGifts.filter((gift) => {
       const isPix = gift.name === PIX_GIFT_NAME;
       const reservedBy = isPix ? null : giftReservations[gift.name];
+      const category = getGiftCategory(gift);
       const matchesSearch = removeAccents(gift.name)
         .toLowerCase()
         .includes(search);
@@ -909,10 +977,31 @@ export default function WeddingSite() {
         giftFilter === "todos" ||
         (giftFilter === "disponiveis" && !reservedBy) ||
         (giftFilter === "reservados" && !!reservedBy);
+      const matchesCategory = giftCategory === "todas" || category === giftCategory;
 
-      return matchesSearch && matchesFilter;
+      return matchesSearch && matchesFilter && matchesCategory;
     });
-  }, [giftFilter, giftReservations, giftSearch, normalizedGifts]);
+
+    return [...result].sort((a, b) => {
+      if (giftSort === "menor-preco") return parseGiftPrice(a.value) - parseGiftPrice(b.value);
+      if (giftSort === "maior-preco") return parseGiftPrice(b.value) - parseGiftPrice(a.value);
+      if (giftSort === "az") return a.name.localeCompare(b.name, "pt-BR");
+      return a.id - b.id;
+    });
+  }, [giftCategory, giftFilter, giftReservations, giftSearch, giftSort, normalizedGifts]);
+
+  const giftStats = useMemo(() => {
+    const reservableGifts = normalizedGifts.filter((gift) => gift.name !== PIX_GIFT_NAME);
+    const reservedCount = reservableGifts.filter((gift) => Boolean(giftReservations[gift.name])).length;
+    const percentage = reservableGifts.length ? Math.round((reservedCount / reservableGifts.length) * 100) : 0;
+
+    return {
+      total: reservableGifts.length,
+      reserved: reservedCount,
+      available: reservableGifts.length - reservedCount,
+      percentage,
+    };
+  }, [giftReservations, normalizedGifts]);
 
   function showFeedback(type: "success" | "error", message: string) {
     setFeedback({ type, message });
@@ -1260,7 +1349,8 @@ export default function WeddingSite() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f7f3ed] text-[#6d4c2f] font-serif overflow-x-hidden">
+    <div className="min-h-screen bg-[#f7f3ed] text-[#6d4c2f] font-serif overflow-x-hidden font-[var(--font-body)]">
+      {loadingScreen && <LoadingScreen />}
       <FallingFlowers />
       <LightParticles />
 
@@ -1473,7 +1563,7 @@ export default function WeddingSite() {
         </div>
       )}
 
-      <section className="relative min-h-[100svh] flex items-center justify-center px-4 sm:px-6 py-8 sm:py-10 md:py-16 overflow-hidden">
+      <section className="relative min-h-[100svh] flex items-center justify-center px-4 sm:px-6 py-8 sm:py-10 md:py-16 overflow-hidden isolate">
         <div
           className="absolute inset-0 bg-cover bg-center animate-[heroBgBreath_16s_ease-in-out_infinite]"
           style={{
@@ -1483,29 +1573,40 @@ export default function WeddingSite() {
         />
 
         <video
+          ref={videoRef}
           autoPlay
           muted
           loop
           playsInline
           poster="/fundo-site.png"
-          className="absolute inset-0 w-full h-full object-cover opacity-75 animate-[heroBgBreath_16s_ease-in-out_infinite]"
+          className="absolute inset-0 w-full h-full object-cover opacity-[0.82] animate-[heroBgBreath_18s_ease-in-out_infinite]"
+          style={{
+            filter: "brightness(0.70) contrast(1.12) saturate(0.92)",
+          }}
+          onLoadedMetadata={(event) => {
+            event.currentTarget.playbackRate = VIDEO_PLAYBACK_RATE;
+          }}
         >
           <source src="/video-bg.mp4" type="video/mp4" />
         </video>
 
-        <div className="absolute inset-0 backdrop-blur-[1.4px] bg-[linear-gradient(180deg,rgba(8,6,4,0.50)_0%,rgba(20,14,9,0.42)_42%,rgba(7,5,3,0.68)_100%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,245,218,0.18)_0%,rgba(255,255,255,0.04)_31%,rgba(0,0,0,0.58)_100%)]" />
-        <div className="absolute inset-0 bg-[linear-gradient(115deg,rgba(226,183,105,0.17)_0%,transparent_35%,rgba(255,255,255,0.08)_52%,transparent_70%)] animate-[goldLight_8s_ease-in-out_infinite]" />
-        <div className="absolute inset-x-0 top-0 h-36 bg-gradient-to-b from-black/34 to-transparent" />
-        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/52 to-transparent" />
-        <div className="pointer-events-none absolute inset-0 opacity-[0.07] bg-[radial-gradient(circle_at_1px_1px,white_1px,transparent_0)] [background-size:4px_4px] mix-blend-soft-light" />
+        <div className="absolute inset-0 backdrop-blur-[1.4px] bg-[linear-gradient(180deg,rgba(7,5,3,0.62)_0%,rgba(21,13,7,0.34)_38%,rgba(7,5,3,0.82)_100%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,232,177,0.32)_0%,rgba(255,255,255,0.06)_30%,rgba(0,0,0,0.72)_100%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(115deg,rgba(226,183,105,0.30)_0%,transparent_31%,rgba(255,255,255,0.14)_52%,transparent_74%)] animate-[goldLight_10s_ease-in-out_infinite]" />
+        <div className="absolute -top-32 left-1/2 h-80 w-[880px] -translate-x-1/2 rounded-full bg-[#f5d59a]/24 blur-3xl animate-[cinemaGlow_7.5s_ease-in-out_infinite]" />
+        <div className="absolute -bottom-24 left-1/2 h-80 w-[720px] -translate-x-1/2 rounded-full bg-black/42 blur-3xl" />
+        <div className="absolute inset-x-0 top-0 h-52 bg-gradient-to-b from-black/50 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-[62%] bg-gradient-to-t from-black/72 via-black/28 to-transparent" />
+        <div className="pointer-events-none absolute inset-0 opacity-[0.09] bg-[radial-gradient(circle_at_1px_1px,white_1px,transparent_0)] [background-size:4px_4px] mix-blend-soft-light" />
+        <div className="pointer-events-none absolute inset-0 opacity-[0.12] bg-[linear-gradient(90deg,transparent_0%,rgba(255,255,255,0.10)_50%,transparent_100%)] animate-[filmSweep_12s_ease-in-out_infinite]" />
+        <div className="pointer-events-none absolute inset-0 border-[18px] border-black/10 md:border-[32px]" />
 
-        <div className="relative max-w-[920px] w-full text-center text-white drop-shadow-[0_10px_34px_rgba(0,0,0,0.50)] px-1 sm:px-0">
-          <p className="uppercase tracking-[0.20em] sm:tracking-[0.38em] md:tracking-[0.52em] text-[10px] sm:text-xs md:text-sm mb-4 sm:mb-5 md:mb-8 leading-5 animate-[heroKicker_1s_ease-out_0.1s_both]">
-            Um novo capítulo da nossa história começa
+        <div className="relative max-w-[960px] w-full text-center text-white drop-shadow-[0_10px_34px_rgba(0,0,0,0.56)] px-1 sm:px-0">
+          <p className="uppercase tracking-[0.20em] sm:tracking-[0.38em] md:tracking-[0.52em] text-[10px] sm:text-xs md:text-sm mb-4 sm:mb-5 md:mb-8 leading-5 animate-[organicReveal_1.05s_cubic-bezier(.2,.8,.2,1)_0.1s_both]">
+            Um novo capítulo em nossa história começa
           </p>
 
-          <h1 className="text-[clamp(3.2rem,10vw,7.4rem)] font-serif mb-4 sm:mb-5 md:mb-7 leading-[0.96] tracking-wide drop-shadow-[0_8px_28px_rgba(0,0,0,0.72)] animate-[heroTitle_1.25s_ease-out_0.25s_both]">
+          <h1 className="font-[var(--font-title)] text-[clamp(3.4rem,10.8vw,8rem)] mb-4 sm:mb-5 md:mb-7 leading-[0.94] tracking-wide drop-shadow-[0_8px_28px_rgba(0,0,0,0.76)] animate-[heroTitle_1.3s_cubic-bezier(.2,.8,.2,1)_0.25s_both]">
             Larissa &amp; Vinicius
           </h1>
 
@@ -1514,7 +1615,7 @@ export default function WeddingSite() {
           </p>
 
           <p className="max-w-2xl mx-auto text-base sm:text-lg md:text-xl leading-7 md:leading-8 mb-7 md:mb-11 drop-shadow-[0_4px_14px_rgba(0,0,0,0.58)] px-2 animate-[heroFadeUp_1s_ease-out_0.6s_both]">
-            17:00 H
+            17:00 horas
           </p>
 
           <p className="max-w-2xl mx-auto text-base sm:text-lg md:text-xl leading-7 md:leading-8 mb-7 md:mb-11 drop-shadow-[0_4px_14px_rgba(0,0,0,0.58)] px-2 animate-[heroFadeUp_1s_ease-out_0.75s_both]">
@@ -1531,13 +1632,13 @@ export default function WeddingSite() {
             ].map(([label, value], index) => (
               <div
                 key={String(label)}
-                className="group bg-white/12 backdrop-blur-2xl rounded-2xl md:rounded-3xl px-3 py-4 md:p-6 border border-white/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.36),inset_0_-18px_35px_rgba(255,255,255,0.05),0_20px_48px_rgba(0,0,0,0.25)] transition-all duration-300 hover:scale-[1.012] hover:bg-white/17 hover:border-white/38"
+                className="group relative overflow-hidden bg-white/13 backdrop-blur-2xl rounded-2xl md:rounded-3xl px-3 py-4 md:p-6 border border-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.44),inset_0_-20px_38px_rgba(255,255,255,0.07),0_22px_54px_rgba(0,0,0,0.30)] transition-all duration-300 hover:scale-[1.018] hover:bg-white/18 hover:border-white/44 before:absolute before:inset-0 before:bg-[linear-gradient(120deg,transparent,rgba(255,255,255,0.20),transparent)] before:-translate-x-full hover:before:translate-x-full before:transition-transform before:duration-700"
                 style={{ animation: `heroFadeUp 0.9s ease-out ${0.95 + index * 0.08}s both` }}
               >
-                <div key={String(value)} className="text-3xl sm:text-4xl md:text-5xl font-bold leading-none animate-[numberTick_0.35s_ease-out_both]">
+                <div key={String(value)} className="relative z-10 font-[var(--font-title)] text-4xl sm:text-5xl md:text-6xl leading-none animate-[numberTick_0.38s_ease-out_both]">
                   {value}
                 </div>
-                <div className="uppercase text-[10px] md:text-sm mt-2 tracking-widest opacity-95">
+                <div className="relative z-10 uppercase text-[10px] md:text-sm mt-2 tracking-widest opacity-95">
                   {label}
                 </div>
               </div>
@@ -1629,39 +1730,104 @@ export default function WeddingSite() {
 
       {activeSection === "local" && (
         <Section id="conteudo" title="Local da Cerimônia" onBack={goHome}>
-          <div className="text-center">
-            <p className="text-xl md:text-2xl mb-4">
-              Cerradu&apos;s Festa e Lazer
-            </p>
+          <div className="grid gap-6 md:grid-cols-[1.05fr_0.95fr] md:items-center">
+            <div className="text-center md:text-left">
+              <p className="font-[var(--font-title)] text-3xl md:text-5xl text-[#8a5b2b] mb-3">
+                Cerradu&apos;s Festa e Lazer
+              </p>
 
-            <p className="text-base md:text-lg mb-8">
-              Clique no botão abaixo para abrir a rota no Google Maps.
-            </p>
+              <p className="text-base md:text-lg mb-6 leading-8 text-[#6d4c2f]">
+                Toque no botão para abrir a rota ou escaneie o QR Code com a câmera do celular.
+              </p>
 
-            <a
-              href={GOOGLE_MAPS_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-block bg-[#8a5b2b] hover:bg-[#74491f] text-white px-6 md:px-8 py-4 rounded-2xl shadow-lg transition-all"
-            >
-              Abrir no Google Maps
-            </a>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <a
+                  href={GOOGLE_MAPS_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex justify-center items-center bg-[#8a5b2b] hover:bg-[#74491f] text-white px-6 md:px-8 py-4 rounded-2xl shadow-lg transition-all hover:-translate-y-0.5"
+                >
+                  Abrir no Google Maps
+                </a>
+
+                <a
+                  href={`https://waze.com/ul?q=${encodeURIComponent("Cerradu's Festa e Lazer")}&navigate=yes`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex justify-center items-center bg-[#f7efe3]/90 border border-[#caa36d] text-[#8a5b2b] px-6 md:px-8 py-4 rounded-2xl shadow-md transition-all hover:bg-white hover:-translate-y-0.5"
+                >
+                  Abrir no Waze
+                </a>
+              </div>
+            </div>
+
+            <div className="mx-auto w-full max-w-xs rounded-[32px] border border-white/70 bg-white/65 backdrop-blur-2xl p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.75),0_24px_60px_rgba(80,50,20,0.16)] text-center">
+              <img
+                src={GOOGLE_MAPS_QR_CODE}
+                alt="QR Code do local do casamento"
+                className="mx-auto rounded-2xl bg-white p-3 shadow-inner"
+                loading="lazy"
+              />
+              <p className="mt-4 text-sm text-[#7a5b3a] leading-6">
+                Escaneie para abrir a localização no Google Maps.
+              </p>
+            </div>
           </div>
         </Section>
       )}
 
       {activeSection === "presentes" && (
         <Section id="conteudo" title="Lista de Presentes" wide onBack={goHome}>
-          <div className="mb-6 grid gap-3 md:grid-cols-[1fr_auto] md:items-center">
-            <input
-              type="search"
-              value={giftSearch}
-              onChange={(e) => setGiftSearch(e.target.value)}
-              placeholder="Buscar presente por nome"
-              className="w-full rounded-2xl border border-[#d9c3a4] bg-white px-4 py-3 outline-none text-base"
-            />
+          <div className="mb-6 rounded-[28px] border border-white/70 bg-white/58 backdrop-blur-2xl p-4 md:p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.75),0_20px_55px_rgba(80,50,20,0.10)]">
+            <div className="mb-5">
+              <div className="mb-2 flex items-center justify-between gap-3 text-sm text-[#7a5b3a]">
+                <span>{giftStats.reserved} de {giftStats.total} presentes reservados</span>
+                <span>{giftStats.percentage}%</span>
+              </div>
+              <div className="h-3 overflow-hidden rounded-full bg-[#eadcc7]">
+                <div
+                  className="h-full rounded-full bg-[linear-gradient(90deg,#8a5b2b,#caa36d)] transition-all duration-700"
+                  style={{ width: `${giftStats.percentage}%` }}
+                />
+              </div>
+            </div>
 
-            <div className="grid grid-cols-3 gap-2 text-xs sm:text-sm">
+            <div className="grid gap-3 lg:grid-cols-[1fr_220px_210px] lg:items-center">
+              <input
+                type="search"
+                value={giftSearch}
+                onChange={(e) => setGiftSearch(e.target.value)}
+                placeholder="Buscar presente por nome"
+                className="w-full rounded-2xl border border-[#d9c3a4]/80 bg-white/84 px-4 py-3 outline-none text-base shadow-inner focus:border-[#8a5b2b]"
+              />
+
+              <select
+                value={giftCategory}
+                onChange={(e) => setGiftCategory(e.target.value as GiftCategory)}
+                className="w-full rounded-2xl border border-[#d9c3a4]/80 bg-white/84 px-4 py-3 outline-none text-base focus:border-[#8a5b2b]"
+              >
+                <option value="todas">Todas as categorias</option>
+                <option value="pix">PIX</option>
+                <option value="cozinha">Cozinha</option>
+                <option value="eletro">Eletrodomésticos</option>
+                <option value="banho">Banho</option>
+                <option value="decoracao">Mesa e decoração</option>
+                <option value="organizacao">Organização</option>
+              </select>
+
+              <select
+                value={giftSort}
+                onChange={(e) => setGiftSort(e.target.value as GiftSort)}
+                className="w-full rounded-2xl border border-[#d9c3a4]/80 bg-white/84 px-4 py-3 outline-none text-base focus:border-[#8a5b2b]"
+              >
+                <option value="relevancia">Ordem original</option>
+                <option value="menor-preco">Menor preço</option>
+                <option value="maior-preco">Maior preço</option>
+                <option value="az">Nome A-Z</option>
+              </select>
+            </div>
+
+            <div className="mt-4 grid grid-cols-3 gap-2 text-xs sm:text-sm">
               {[
                 ["todos", "Todos"],
                 ["disponiveis", "Disponíveis"],
@@ -1673,8 +1839,8 @@ export default function WeddingSite() {
                   onClick={() => setGiftFilter(value as GiftFilter)}
                   className={`rounded-2xl border px-3 py-3 font-semibold transition-all ${
                     giftFilter === value
-                      ? "bg-[#8a5b2b] text-white border-[#8a5b2b]"
-                      : "bg-[#f7efe3] text-[#8a5b2b] border-[#caa36d] hover:bg-white"
+                      ? "bg-[#8a5b2b] text-white border-[#8a5b2b] shadow-lg"
+                      : "bg-[#f7efe3]/85 text-[#8a5b2b] border-[#caa36d] hover:bg-white"
                   }`}
                 >
                   {label}
@@ -1684,11 +1850,7 @@ export default function WeddingSite() {
           </div>
 
           <p className="mb-5 text-sm md:text-base text-[#7a5b3a]">
-            {filteredGifts.length}{" "}
-            {filteredGifts.length === 1
-              ? "presente encontrado"
-              : "presentes encontrados"}
-            .
+            {filteredGifts.length} {filteredGifts.length === 1 ? "presente encontrado" : "presentes encontrados"}.
           </p>
 
           {filteredGifts.length === 0 ? (
@@ -1704,7 +1866,7 @@ export default function WeddingSite() {
                 return (
                   <div
                     key={gift.id}
-                    className="border border-[#eadcc7] rounded-[18px] overflow-hidden shadow-md bg-white flex flex-col transition-all hover:-translate-y-1 hover:shadow-xl"
+                    className="group border border-white/70 rounded-[22px] overflow-hidden shadow-[0_14px_38px_rgba(80,50,20,0.10)] bg-white/76 backdrop-blur-xl flex flex-col transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_22px_58px_rgba(80,50,20,0.18)]"
                   >
                     <img
                       src={gift.image}
@@ -1882,6 +2044,89 @@ export default function WeddingSite() {
         }
 
 
+
+
+        :global(:root) {
+          --font-title: "Cormorant Garamond", Georgia, serif;
+          --font-body: "Montserrat", system-ui, sans-serif;
+        }
+
+        :global(body) {
+          font-family: var(--font-body);
+        }
+
+        :global(h1), :global(h2), :global(h3) {
+          font-family: var(--font-title);
+        }
+
+        @keyframes organicReveal {
+          from {
+            opacity: 0;
+            transform: translate3d(0, 24px, 0) scale(0.985);
+            filter: blur(8px);
+          }
+          to {
+            opacity: 1;
+            transform: translate3d(0, 0, 0) scale(1);
+            filter: blur(0);
+          }
+        }
+
+        @keyframes sectionReveal {
+          from {
+            opacity: 0;
+            transform: translateY(26px);
+            filter: blur(6px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+            filter: blur(0);
+          }
+        }
+
+        @keyframes cinemaGlow {
+          0%, 100% {
+            opacity: 0.36;
+            transform: translateX(-50%) scale(0.96);
+          }
+          50% {
+            opacity: 0.66;
+            transform: translateX(-50%) scale(1.04);
+          }
+        }
+
+        @keyframes filmSweep {
+          0%, 100% {
+            transform: translateX(-45%);
+            opacity: 0.05;
+          }
+          50% {
+            transform: translateX(45%);
+            opacity: 0.14;
+          }
+        }
+
+        @keyframes loaderContent {
+          from {
+            opacity: 0;
+            transform: translateY(18px) scale(0.98);
+            filter: blur(6px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            filter: blur(0);
+          }
+        }
+
+        @keyframes loaderExit {
+          to {
+            opacity: 0;
+            visibility: hidden;
+          }
+        }
+
         @keyframes musicPulse {
           0%, 100% {
             box-shadow: 0 12px 35px rgba(0, 0, 0, 0.22);
@@ -1892,6 +2137,24 @@ export default function WeddingSite() {
           }
         }
       `}</style>
+    </div>
+  );
+}
+
+function LoadingScreen() {
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden bg-[#120d08] text-white animate-[loaderExit_0.55s_ease-in_1.15s_both]">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(214,174,102,0.24),transparent_42%),linear-gradient(180deg,rgba(0,0,0,0.20),rgba(0,0,0,0.72))]" />
+      <div className="absolute inset-0 opacity-[0.08] bg-[radial-gradient(circle_at_1px_1px,white_1px,transparent_0)] [background-size:4px_4px]" />
+      <div className="relative text-center px-6 animate-[loaderContent_1s_cubic-bezier(.2,.8,.2,1)_both]">
+        <p className="uppercase tracking-[0.45em] text-[10px] md:text-xs text-[#e7c98e] mb-4">
+          convite de casamento
+        </p>
+        <h2 className="font-[var(--font-title)] text-5xl md:text-7xl leading-none drop-shadow-[0_12px_38px_rgba(0,0,0,0.55)]">
+          Larissa &amp; Vinicius
+        </h2>
+        <div className="mx-auto mt-7 h-[1px] w-40 bg-gradient-to-r from-transparent via-[#e7c98e] to-transparent" />
+      </div>
     </div>
   );
 }
@@ -2033,10 +2296,10 @@ function Section({ id, title, children, wide = false, onBack }: SectionProps) {
   return (
     <section
       id={id}
-      className={`${wide ? "max-w-7xl" : "max-w-4xl"} mx-auto px-3 sm:px-4 md:px-6 py-8 md:py-20`}
+      className={`${wide ? "max-w-7xl" : "max-w-4xl"} mx-auto px-3 sm:px-4 md:px-6 py-8 md:py-20 animate-[sectionReveal_0.75s_cubic-bezier(.2,.8,.2,1)_both]`}
     >
-      <div className="bg-white rounded-[24px] md:rounded-[40px] p-4 sm:p-5 md:p-12 shadow-2xl border border-[#eadcc7]">
-        <div className="flex flex-col md:flex-row justify-between items-center mb-6 md:mb-10 gap-4">
+      <div className="relative overflow-hidden bg-white/72 backdrop-blur-2xl rounded-[24px] md:rounded-[40px] p-4 sm:p-5 md:p-12 shadow-[inset_0_1px_0_rgba(255,255,255,0.78),0_28px_80px_rgba(80,50,20,0.14)] border border-white/70 before:pointer-events-none before:absolute before:inset-0 before:bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.75),transparent_32%)]">
+        <div className="relative z-10 flex flex-col md:flex-row justify-between items-center mb-6 md:mb-10 gap-4">
           <h2 className="text-2xl sm:text-3xl md:text-4xl text-[#8a5b2b] text-center md:text-left">
             {title}
           </h2>
@@ -2052,7 +2315,7 @@ function Section({ id, title, children, wide = false, onBack }: SectionProps) {
           )}
         </div>
 
-        {children}
+        <div className="relative z-10">{children}</div>
       </div>
     </section>
   );
@@ -2081,7 +2344,7 @@ function Input({ type = "text", ...props }: InputProps) {
   return (
     <input
       type={type}
-      className="p-4 rounded-2xl border border-[#d9c3a4] outline-none w-full text-base"
+      className="p-4 rounded-2xl border border-[#d9c3a4]/80 bg-white/84 outline-none w-full text-base shadow-inner focus:border-[#8a5b2b] transition-all"
       {...props}
     />
   );
@@ -2098,7 +2361,7 @@ function TextArea(props: TextAreaProps) {
   return (
     <textarea
       rows={4}
-      className="p-4 rounded-2xl border border-[#d9c3a4] outline-none w-full text-base"
+      className="p-4 rounded-2xl border border-[#d9c3a4]/80 bg-white/84 outline-none w-full text-base shadow-inner focus:border-[#8a5b2b] transition-all"
       {...props}
     />
   );
