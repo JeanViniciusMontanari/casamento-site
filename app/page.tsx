@@ -1,5 +1,9 @@
 "use client";
 
+/* =========================================================
+    IMPORTS
+  ========================================================= */
+
 import React, {
   ChangeEvent,
   FormEvent,
@@ -9,6 +13,10 @@ import React, {
   useRef,
   useState,
 } from "react";
+
+/* =========================================================
+    TYPES
+  ========================================================= */
 
 type RsvpData = {
   name: string;
@@ -33,7 +41,14 @@ type GiftResponse = {
 
 type GiftFilter = "todos" | "disponiveis" | "reservados";
 type GiftSort = "relevancia" | "menor-preco" | "maior-preco" | "az";
-type GiftCategory = "todas" | "pix" | "cozinha" | "eletro" | "banho" | "decoracao" | "organizacao";
+type GiftCategory =
+  | "todas"
+  | "pix"
+  | "cozinha"
+  | "eletro"
+  | "banho"
+  | "decoracao"
+  | "organizacao";
 
 type Feedback = {
   type: "success" | "error";
@@ -46,14 +61,20 @@ type RsvpConfirmation = {
   guests: string;
 } | null;
 
+/* =========================================================
+    CONSTANTES
+  ========================================================= */
+
 const GOOGLE_SCRIPT_URL =
   "https://script.google.com/macros/s/AKfycbyh-Aeo2tH331m6XWV7xcTrlR9cE0e9hQyDDaAtx1W-TiMlpik4gRk3OOZ7oUVWWbE7/exec";
 
 const GOOGLE_MAPS_URL = "https://maps.app.goo.gl/L1cr1U27FxV6tqaUA";
 
-const WEDDING_DATE = new Date("2027-01-15T19:00:00");
-const MUSIC_START_TIME = 265;
-const VIDEO_PLAYBACK_RATE = 0.55; // 1 = normal | 0.7 = lento | 0.55 = cinematográfico | 0.35 = ultra lento
+const WEDDING_DATE = new Date("2027-01-15T17:00:00");
+const MUSIC_START_TIME = 261;
+const MUSIC_VOLUME = 0.35;
+const MUSIC_FADE_IN_DURATION = 1800;
+const MUSIC_FADE_OUT_DURATION = 1200;
 const GOOGLE_MAPS_QR_CODE = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(GOOGLE_MAPS_URL)}`;
 
 const PIX_GIFT_NAME = "Presente via PIX";
@@ -61,6 +82,9 @@ const PIX_KEY = "05545294163";
 const PIX_RECEIVER_NAME = "Larissa Moitinho Ferreira da Silva";
 const PIX_RECEIVER_CITY = "Sinop";
 
+/* =========================================================
+    FUNÇÕES AUXILIARES
+  ========================================================= */
 
 function cleanText(value: string) {
   return value.trim().replace(/\s+/g, " ");
@@ -93,7 +117,6 @@ function formatPhone(value: string) {
   return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7)}`;
 }
 
-
 function removeAccents(text: string) {
   return text
     .normalize("NFD")
@@ -117,19 +140,23 @@ function getGiftCategory(gift: Gift): GiftCategory {
 
   if (gift.name === PIX_GIFT_NAME) return "pix";
 
-  if (
-    /toalha|travesseiro|banheiro|algodao|cotonete/.test(name)
-  ) {
+  if (/toalha|travesseiro|banheiro|algodao|cotonete/.test(name)) {
     return "banho";
   }
 
   if (
-    /aspirador|grill|sanduicheira|panela de arroz|liquidificador|forno|mixer|chaleira eletrica|torradeira|batedeira|processador|passadeira/.test(name)
+    /aspirador|grill|sanduicheira|panela de arroz|liquidificador|forno|mixer|chaleira eletrica|torradeira|batedeira|processador|passadeira/.test(
+      name,
+    )
   ) {
     return "eletro";
   }
 
-  if (/abajur|bandeja|prato de bolo|jantar|tacas|xicaras|jarra|aparelho|americano/.test(name)) {
+  if (
+    /abajur|bandeja|prato de bolo|jantar|tacas|xicaras|jarra|aparelho|americano/.test(
+      name,
+    )
+  ) {
     return "decoracao";
   }
 
@@ -139,6 +166,10 @@ function getGiftCategory(gift: Gift): GiftCategory {
 
   return "cozinha";
 }
+
+/* =========================================================
+    LISTA DE PRESENTES
+  ========================================================= */
 
 const gifts: Gift[] = [
   {
@@ -837,9 +868,20 @@ const gifts: Gift[] = [
   },
 ];
 
+/* =========================================================
+    COMPONENTE PRINCIPAL
+  ========================================================= */
+
 export default function WeddingSite() {
+  /* =========================================================
+      REFS
+    ========================================================= */
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const audioFadeRef = useRef<number | null>(null);
+
+  /* =========================================================
+      STATES
+    ========================================================= */
 
   const [musicPlaying, setMusicPlaying] = useState(false);
   const [activeSection, setActiveSection] = useState<string | null>(null);
@@ -869,7 +911,8 @@ export default function WeddingSite() {
     Record<string, string>
   >({});
   const [feedback, setFeedback] = useState<Feedback>(null);
-  const [rsvpConfirmation, setRsvpConfirmation] = useState<RsvpConfirmation>(null);
+  const [rsvpConfirmation, setRsvpConfirmation] =
+    useState<RsvpConfirmation>(null);
   const [giftSearch, setGiftSearch] = useState("");
   const [giftFilter, setGiftFilter] = useState<GiftFilter>("todos");
   const [giftSort, setGiftSort] = useState<GiftSort>("relevancia");
@@ -879,6 +922,7 @@ export default function WeddingSite() {
   const [giftGuestName, setGiftGuestName] = useState("");
   const [giftPixValue, setGiftPixValue] = useState("");
   const [giftSubmitting, setGiftSubmitting] = useState(false);
+  const [visibleGiftCount, setVisibleGiftCount] = useState(16);
 
   useEffect(() => {
     const updateCountdown = () => {
@@ -946,20 +990,23 @@ export default function WeddingSite() {
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
-    audio.volume = 0.35;
+
+    audio.volume = 0;
+
+    return () => {
+      if (audioFadeRef.current) {
+        window.clearInterval(audioFadeRef.current);
+      }
+    };
   }, []);
 
   useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    video.playbackRate = VIDEO_PLAYBACK_RATE;
-  }, []);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => setLoadingScreen(false), 1450);
+    const timer = window.setTimeout(() => setLoadingScreen(false), 4000);
     return () => window.clearTimeout(timer);
   }, []);
+  /* =========================================================
+      MEMOS
+    ========================================================= */
 
   const normalizedGifts = useMemo(() => gifts.map(normalizeGift), []);
 
@@ -977,23 +1024,38 @@ export default function WeddingSite() {
         giftFilter === "todos" ||
         (giftFilter === "disponiveis" && !reservedBy) ||
         (giftFilter === "reservados" && !!reservedBy);
-      const matchesCategory = giftCategory === "todas" || category === giftCategory;
+      const matchesCategory =
+        giftCategory === "todas" || category === giftCategory;
 
       return matchesSearch && matchesFilter && matchesCategory;
     });
 
     return [...result].sort((a, b) => {
-      if (giftSort === "menor-preco") return parseGiftPrice(a.value) - parseGiftPrice(b.value);
-      if (giftSort === "maior-preco") return parseGiftPrice(b.value) - parseGiftPrice(a.value);
+      if (giftSort === "menor-preco")
+        return parseGiftPrice(a.value) - parseGiftPrice(b.value);
+      if (giftSort === "maior-preco")
+        return parseGiftPrice(b.value) - parseGiftPrice(a.value);
       if (giftSort === "az") return a.name.localeCompare(b.name, "pt-BR");
       return a.id - b.id;
     });
-  }, [giftCategory, giftFilter, giftReservations, giftSearch, giftSort, normalizedGifts]);
-
+  }, [
+    giftCategory,
+    giftFilter,
+    giftReservations,
+    giftSearch,
+    giftSort,
+    normalizedGifts,
+  ]);
   const giftStats = useMemo(() => {
-    const reservableGifts = normalizedGifts.filter((gift) => gift.name !== PIX_GIFT_NAME);
-    const reservedCount = reservableGifts.filter((gift) => Boolean(giftReservations[gift.name])).length;
-    const percentage = reservableGifts.length ? Math.round((reservedCount / reservableGifts.length) * 100) : 0;
+    const reservableGifts = normalizedGifts.filter(
+      (gift) => gift.name !== PIX_GIFT_NAME,
+    );
+    const reservedCount = reservableGifts.filter((gift) =>
+      Boolean(giftReservations[gift.name]),
+    ).length;
+    const percentage = reservableGifts.length
+      ? Math.round((reservedCount / reservableGifts.length) * 100)
+      : 0;
 
     return {
       total: reservableGifts.length,
@@ -1003,30 +1065,104 @@ export default function WeddingSite() {
     };
   }, [giftReservations, normalizedGifts]);
 
+  useEffect(() => {
+    setVisibleGiftCount(16);
+  }, [giftCategory, giftFilter, giftSearch, giftSort]);
+
+  const visibleGifts = useMemo(
+    () => filteredGifts.slice(0, visibleGiftCount),
+    [filteredGifts, visibleGiftCount],
+  );
+
+  const hasMoreGifts = visibleGiftCount < filteredGifts.length;
+
+  /* =========================================================
+      FEEDBACK
+    ========================================================= */
+
+  function clearGiftFilters() {
+    setGiftSearch("");
+    setGiftFilter("todos");
+    setGiftSort("relevancia");
+    setGiftCategory("todas");
+  }
+
   function showFeedback(type: "success" | "error", message: string) {
     setFeedback({ type, message });
     window.setTimeout(() => setFeedback(null), 4200);
   }
 
-  async function toggleMusic() {
+  function stopAudioFade() {
+    if (audioFadeRef.current) {
+      window.clearInterval(audioFadeRef.current);
+      audioFadeRef.current = null;
+    }
+  }
+
+  function fadeAudioVolume(
+    audio: HTMLAudioElement,
+    targetVolume: number,
+    duration: number,
+    onComplete?: () => void,
+  ) {
+    stopAudioFade();
+
+    const startVolume = audio.volume;
+    const startTime = performance.now();
+
+    audioFadeRef.current = window.setInterval(() => {
+      const progress = Math.min((performance.now() - startTime) / duration, 1);
+      audio.volume = startVolume + (targetVolume - startVolume) * progress;
+
+      if (progress >= 1) {
+        stopAudioFade();
+        audio.volume = targetVolume;
+        onComplete?.();
+      }
+    }, 16);
+  }
+
+  async function playMusicWithFade() {
     const audio = audioRef.current;
     if (!audio) return;
 
     try {
-      if (audio.paused) {
-        if (audio.currentTime === 0) {
-          audio.currentTime = MUSIC_START_TIME;
-        }
-
-        await audio.play();
-        setMusicPlaying(true);
-      } else {
-        audio.pause();
-        setMusicPlaying(false);
+      if (audio.currentTime === 0) {
+        audio.currentTime = MUSIC_START_TIME;
       }
+
+      audio.volume = 0;
+      await audio.play();
+      setMusicPlaying(true);
+      fadeAudioVolume(audio, MUSIC_VOLUME, MUSIC_FADE_IN_DURATION);
     } catch (error) {
       console.error("Erro ao tocar música:", error);
       setMusicPlaying(false);
+    }
+  }
+
+  function pauseMusicWithFade() {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    fadeAudioVolume(audio, 0, MUSIC_FADE_OUT_DURATION, () => {
+      audio.pause();
+      setMusicPlaying(false);
+    });
+  }
+
+  /* =========================================================
+      CONTROLE DE MÚSICA
+    ========================================================= */
+
+  async function toggleMusic() {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    if (audio.paused) {
+      await playMusicWithFade();
+    } else {
+      pauseMusicWithFade();
     }
   }
 
@@ -1035,15 +1171,12 @@ export default function WeddingSite() {
     if (!audio) return;
 
     audio.currentTime = MUSIC_START_TIME;
-
-    try {
-      await audio.play();
-      setMusicPlaying(true);
-    } catch (error) {
-      console.error("Erro ao reiniciar música:", error);
-      setMusicPlaying(false);
-    }
+    await playMusicWithFade();
   }
+
+  /* =========================================================
+      FUNÇÕES PIX
+    ========================================================= */
 
   function formatPixValue(value: string) {
     const clean = value.replace(/[^\d,.-]/g, "").replace(",", ".");
@@ -1052,13 +1185,6 @@ export default function WeddingSite() {
     if (Number.isNaN(number) || number <= 0) return "";
 
     return number.toFixed(2);
-  }
-
-  function removeAccents(text: string) {
-    return text
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-zA-Z0-9 ]/g, "");
   }
 
   function pixField(id: string, value: string) {
@@ -1146,6 +1272,35 @@ export default function WeddingSite() {
     }
   }
 
+  async function copyPixKey() {
+    try {
+      await navigator.clipboard.writeText(PIX_KEY);
+      showFeedback("success", "Chave PIX copiada!");
+    } catch {
+      const textArea = document.createElement("textarea");
+      textArea.value = PIX_KEY;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-9999px";
+      textArea.style.top = "0";
+
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+
+      try {
+        document.execCommand("copy");
+        showFeedback("success", "Chave PIX copiada!");
+      } catch {
+        showFeedback(
+          "error",
+          "Não foi possível copiar a chave automaticamente.",
+        );
+      }
+
+      document.body.removeChild(textArea);
+    }
+  }
+
   function handleChange(
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) {
@@ -1157,6 +1312,10 @@ export default function WeddingSite() {
       [name]: nextValue,
     }));
   }
+
+  /* =========================================================
+      RSVP
+    ========================================================= */
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -1213,6 +1372,10 @@ export default function WeddingSite() {
       setSending(false);
     }
   }
+
+  /* =========================================================
+      PRESENTES
+    ========================================================= */
 
   function openGiftModal(gift: Gift) {
     setSelectedGift(gift);
@@ -1303,6 +1466,10 @@ export default function WeddingSite() {
     }
   }
 
+  /* =========================================================
+      SCROLL E NAVEGAÇÃO
+    ========================================================= */
+
   function smoothScrollTo(targetY: number, duration: number) {
     const startY = window.scrollY;
     const difference = targetY - startY;
@@ -1350,9 +1517,67 @@ export default function WeddingSite() {
 
   return (
     <div className="min-h-screen bg-[#f7f3ed] text-[#6d4c2f] font-serif overflow-x-hidden font-[var(--font-body)]">
+      <style jsx global>{`
+        @media (max-width: 768px) {
+          html {
+            scroll-behavior: auto;
+          }
+
+          * {
+            -webkit-tap-highlight-color: transparent;
+          }
+
+          .mobile-soft {
+            backdrop-filter: blur(10px) !important;
+            box-shadow: 0 10px 24px rgba(80, 50, 20, 0.12) !important;
+          }
+
+          .mobile-no-heavy-animation {
+            animation: none !important;
+          }
+
+          .mobile-hero-bg {
+            transform: scale(1.01) !important;
+            background-position: center top !important;
+          }
+
+          input,
+          select,
+          textarea {
+            font-size: 16px !important;
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          *,
+          *::before,
+          *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            scroll-behavior: auto !important;
+            transition-duration: 0.01ms !important;
+          }
+        }
+      `}</style>
+
       {loadingScreen && <LoadingScreen />}
-      <FallingFlowers />
       <LightParticles />
+
+      <a
+        href="https://wa.me/556699766684?text=Olá!%20Gostaria%20de%20tirar%20uma%20dúvida%20sobre%20o%20casamento."
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Falar com a noiva pelo WhatsApp"
+        className="fixed bottom-4 right-4 md:bottom-7 md:right-7 z-50 flex h-11 w-11 md:h-12 md:w-12 items-center justify-center rounded-full border border-[#d9b56f]/70 bg-white/90 text-[#1f8f4d] shadow-[0_14px_34px_rgba(0,0,0,0.22),0_0_0_8px_rgba(217,181,111,0.10),inset_0_1px_0_rgba(255,255,255,0.85)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:scale-105 hover:bg-white animate-[whatsappPulse_4.2s_ease-in-out_infinite] mobile-soft"
+      >
+        <svg
+          viewBox="0 0 32 32"
+          aria-hidden="true"
+          className="h-6 w-6 md:h-7 md:w-7 fill-current"
+        >
+          <path d="M16.04 4C9.4 4 4 9.31 4 15.84c0 2.09.56 4.12 1.62 5.91L4 28l6.43-1.59a12.2 12.2 0 0 0 5.61 1.39C22.68 27.8 28 22.49 28 15.96 28 9.31 22.68 4 16.04 4Zm0 21.66c-1.78 0-3.51-.48-5.03-1.4l-.36-.21-3.81.94.96-3.66-.24-.38a9.7 9.7 0 0 1-1.48-5.11c0-5.34 4.46-9.68 9.96-9.68 5.38 0 9.84 4.46 9.84 9.8 0 5.34-4.42 9.7-9.84 9.7Zm5.46-7.26c-.3-.15-1.77-.86-2.05-.96-.27-.1-.47-.15-.67.15-.2.29-.77.95-.95 1.14-.17.2-.35.22-.65.07-.3-.15-1.27-.46-2.42-1.47-.9-.79-1.5-1.77-1.67-2.06-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.18.2-.3.3-.5.1-.2.05-.37-.03-.52-.07-.15-.67-1.58-.92-2.16-.24-.56-.49-.49-.67-.5h-.57c-.2 0-.52.07-.8.37-.27.29-1.05 1.01-1.05 2.47s1.08 2.87 1.23 3.07c.15.2 2.12 3.18 5.15 4.46.72.3 1.28.48 1.72.62.72.22 1.38.19 1.9.11.58-.09 1.77-.72 2.02-1.41.25-.69.25-1.28.17-1.41-.07-.13-.27-.2-.57-.35Z" />
+        </svg>
+      </a>
 
       <audio
         ref={audioRef}
@@ -1364,32 +1589,30 @@ export default function WeddingSite() {
       <button
         type="button"
         onClick={toggleMusic}
-        className="fixed bottom-6 right-4 md:bottom-7 md:right-7 z-50 bg-white/80 text-[#8a5b2b] border border-white/60 backdrop-blur-xl px-4 py-2.5 rounded-full shadow-[0_12px_35px_rgba(0,0,0,0.22)] hover:bg-white hover:scale-[1.02] transition-all duration-300 text-sm font-semibold animate-[musicPulse_3.2s_ease-in-out_infinite]"
-        aria-label={musicPlaying ? "Pausar música" : "Tocar música"}
+        className="fixed top-4 right-4 md:top-7 md:right-7 z-50 flex h-9 w-9 md:h-10 md:w-10 items-center justify-center rounded-full border border-[#e7c98e]/70 bg-white/88 text-[#8a5b2b] shadow-[0_10px_28px_rgba(0,0,0,0.22),inset_0_1px_0_rgba(255,255,255,0.75)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:scale-105 hover:bg-white animate-[musicPulse_4.4s_ease-in-out_infinite] mobile-soft"
+        aria-label={musicPlaying ? "Pausar" : "Tocar"}
       >
-        <div className="flex items-center gap-2">
-          {musicPlaying ? (
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              className="w-4 h-4"
-            >
-              <path d="M8 5h3v14H8zm5 0h3v14h-3z" />
-            </svg>
-          ) : (
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              className="w-4 h-4 ml-[2px]"
-            >
-              <path d="M8 5v14l11-7z" />
-            </svg>
-          )}
-
-          <span>{musicPlaying ? "Nossa música" : "Tocar música"}</span>
-        </div>
+        {musicPlaying ? (
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            className="h-4 w-4"
+            aria-hidden="true"
+          >
+            <path d="M8 5h3v14H8zm5 0h3v14h-3z" />
+          </svg>
+        ) : (
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            className="h-4 w-4 ml-[2px]"
+            aria-hidden="true"
+          >
+            <path d="M8 5v14l11-7z" />
+          </svg>
+        )}
       </button>
 
       {showPixModal && (
@@ -1406,6 +1629,8 @@ export default function WeddingSite() {
                 src={pixQrCode}
                 alt="QR Code PIX"
                 className="mx-auto mb-4 rounded-xl"
+                loading="lazy"
+                decoding="async"
               />
             )}
 
@@ -1420,15 +1645,23 @@ export default function WeddingSite() {
             <button
               type="button"
               onClick={copyPixCode}
-              className="w-full bg-[#8a5b2b] text-white py-3 rounded-2xl mb-3"
+              className="w-full bg-[#8a5b2b] text-white py-3 rounded-2xl mb-3 font-semibold"
             >
               Copiar código PIX
             </button>
 
             <button
               type="button"
+              onClick={copyPixKey}
+              className="w-full bg-white text-[#8a5b2b] border border-[#caa36d] py-3 rounded-2xl mb-3 font-semibold"
+            >
+              Copiar chave PIX
+            </button>
+
+            <button
+              type="button"
               onClick={() => setShowPixModal(false)}
-              className="w-full bg-[#f7efe3] text-[#8a5b2b] border border-[#caa36d] py-3 rounded-2xl"
+              className="w-full bg-[#f7efe3] text-[#8a5b2b] border border-[#caa36d] py-3 rounded-2xl font-semibold"
             >
               Fechar
             </button>
@@ -1528,7 +1761,8 @@ export default function WeddingSite() {
                 </p>
                 {rsvpConfirmation.guests && (
                   <p className="text-sm text-[#8a6a45] mb-2">
-                    <strong>Quantidade:</strong> {rsvpConfirmation.guests} convidado(s)
+                    <strong>Quantidade:</strong> {rsvpConfirmation.guests}{" "}
+                    convidado(s)
                   </p>
                 )}
                 <p className="text-sm text-[#8a6a45] mb-2">
@@ -1563,67 +1797,56 @@ export default function WeddingSite() {
         </div>
       )}
 
-      <section className="relative min-h-[100svh] flex items-center justify-center px-4 sm:px-6 py-8 sm:py-10 md:py-16 overflow-hidden isolate">
+      <section className="relative min-h-[100svh] flex items-center justify-center px-4 sm:px-6 py-8 sm:py-10 md:py-16 overflow-hidden isolate bg-[#100b07]">
         <div
-          className="absolute inset-0 bg-cover bg-center animate-[heroBgBreath_16s_ease-in-out_infinite]"
+          className="absolute inset-0 bg-cover bg-center animate-[heroBgBreath_18s_ease-in-out_infinite] mobile-hero-bg"
           style={{
             backgroundImage: "url('/fundo-site.png')",
-            transform: "scale(1.08)",
+            transform: "scale(1.02)",
           }}
         />
 
-        <video
-          ref={videoRef}
-          autoPlay
-          muted
-          loop
-          playsInline
-          poster="/fundo-site.png"
-          className="absolute inset-0 w-full h-full object-cover opacity-[0.82] animate-[heroBgBreath_18s_ease-in-out_infinite]"
-          style={{
-            filter: "brightness(0.70) contrast(1.12) saturate(0.92)",
-          }}
-          onLoadedMetadata={(event) => {
-            event.currentTarget.playbackRate = VIDEO_PLAYBACK_RATE;
-          }}
-        >
-          <source src="/video-bg.mp4" type="video/mp4" />
-        </video>
-
-        <div className="absolute inset-0 backdrop-blur-[1.4px] bg-[linear-gradient(180deg,rgba(7,5,3,0.62)_0%,rgba(21,13,7,0.34)_38%,rgba(7,5,3,0.82)_100%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,232,177,0.32)_0%,rgba(255,255,255,0.06)_30%,rgba(0,0,0,0.72)_100%)]" />
-        <div className="absolute inset-0 bg-[linear-gradient(115deg,rgba(226,183,105,0.30)_0%,transparent_31%,rgba(255,255,255,0.14)_52%,transparent_74%)] animate-[goldLight_10s_ease-in-out_infinite]" />
-        <div className="absolute -top-32 left-1/2 h-80 w-[880px] -translate-x-1/2 rounded-full bg-[#f5d59a]/24 blur-3xl animate-[cinemaGlow_7.5s_ease-in-out_infinite]" />
-        <div className="absolute -bottom-24 left-1/2 h-80 w-[720px] -translate-x-1/2 rounded-full bg-black/42 blur-3xl" />
-        <div className="absolute inset-x-0 top-0 h-52 bg-gradient-to-b from-black/50 to-transparent" />
-        <div className="absolute inset-x-0 bottom-0 h-[62%] bg-gradient-to-t from-black/72 via-black/28 to-transparent" />
-        <div className="pointer-events-none absolute inset-0 opacity-[0.09] bg-[radial-gradient(circle_at_1px_1px,white_1px,transparent_0)] [background-size:4px_4px] mix-blend-soft-light" />
-        <div className="pointer-events-none absolute inset-0 opacity-[0.12] bg-[linear-gradient(90deg,transparent_0%,rgba(255,255,255,0.10)_50%,transparent_100%)] animate-[filmSweep_12s_ease-in-out_infinite]" />
-        <div className="pointer-events-none absolute inset-0 border-[18px] border-black/10 md:border-[32px]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(9,6,3,0.22)_0%,rgba(10,7,4,0.42)_34%,rgba(4,3,2,0.82)_100%),linear-gradient(180deg,rgba(6,4,2,0.56)_0%,rgba(18,11,5,0.18)_42%,rgba(4,2,1,0.80)_100%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.50),transparent_22%,transparent_78%,rgba(0,0,0,0.50))]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(250,214,143,0.30)_0%,rgba(231,190,112,0.13)_28%,rgba(0,0,0,0.08)_48%,rgba(0,0,0,0.58)_100%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,218,146,0.28)_0%,rgba(221,169,78,0.10)_35%,transparent_68%)] mix-blend-screen" />
+        <div className="absolute inset-0 bg-[linear-gradient(115deg,rgba(226,183,105,0.15)_0%,transparent_30%,rgba(255,255,255,0.07)_52%,transparent_74%)] animate-[goldLight_12s_ease-in-out_infinite] mobile-no-heavy-animation" />
+        <div className="absolute -top-32 left-1/2 h-72 w-[760px] -translate-x-1/2 rounded-full bg-[#f5d59a]/16 blur-3xl animate-[cinemaGlow_7.5s_ease-in-out_infinite] mobile-no-heavy-animation" />
+        <div className="absolute -bottom-24 left-1/2 h-80 w-[720px] -translate-x-1/2 rounded-full bg-black/38 blur-3xl" />
+        <div className="absolute inset-x-0 top-0 h-52 bg-gradient-to-b from-black/44 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-[62%] bg-gradient-to-t from-black/68 via-black/22 to-transparent" />
 
         <div className="relative max-w-[960px] w-full text-center text-white drop-shadow-[0_10px_34px_rgba(0,0,0,0.56)] px-1 sm:px-0">
-          <p className="uppercase tracking-[0.20em] sm:tracking-[0.38em] md:tracking-[0.52em] text-[10px] sm:text-xs md:text-sm mb-4 sm:mb-5 md:mb-8 leading-5 animate-[organicReveal_1.05s_cubic-bezier(.2,.8,.2,1)_0.1s_both]">
+          <p className="uppercase tracking-[0.16em] sm:tracking-[0.34em] md:tracking-[0.48em] text-[9px] sm:text-xs md:text-sm mb-4 sm:mb-5 md:mb-8 leading-5 animate-[organicReveal_1.05s_cubic-bezier(.2,.8,.2,1)_0.1s_both]">
             Um novo capítulo em nossa história começa
           </p>
 
-          <h1 className="font-[var(--font-title)] text-[clamp(3.4rem,10.8vw,8rem)] mb-4 sm:mb-5 md:mb-7 leading-[0.94] tracking-wide drop-shadow-[0_8px_28px_rgba(0,0,0,0.76)] animate-[heroTitle_1.3s_cubic-bezier(.2,.8,.2,1)_0.25s_both]">
-            Larissa &amp; Vinicius
+          <h1 className="font-[var(--font-title)] text-[clamp(3.1rem,13.5vw,8.1rem)] mb-4 sm:mb-5 md:mb-7 leading-[0.88] tracking-[0.015em] drop-shadow-[0_12px_34px_rgba(0,0,0,0.86)] animate-[heroTitle_1.35s_cubic-bezier(.2,.8,.2,1)_0.25s_both]">
+            <span className="inline-block bg-[linear-gradient(180deg,#fff8e8_0%,#f0d69a_42%,#c7963f_100%)] bg-clip-text text-transparent">Larissa</span>
+            <span className="mx-2 inline-block text-[#f2ddb0]">&amp;</span>
+            <span className="inline-block bg-[linear-gradient(180deg,#fff8e8_0%,#f0d69a_42%,#c7963f_100%)] bg-clip-text text-transparent">Vinicius</span>
           </h1>
 
           <p className="text-xl sm:text-2xl md:text-3xl mb-3 md:mb-4 drop-shadow-[0_4px_14px_rgba(0,0,0,0.58)] animate-[heroFadeUp_1s_ease-out_0.45s_both]">
             15 de Janeiro de 2027
           </p>
 
-          <p className="max-w-2xl mx-auto text-base sm:text-lg md:text-xl leading-7 md:leading-8 mb-7 md:mb-11 drop-shadow-[0_4px_14px_rgba(0,0,0,0.58)] px-2 animate-[heroFadeUp_1s_ease-out_0.6s_both]">
-            17:00 horas
-          </p>
+          <div className="mb-7 md:mb-11 flex items-center justify-center gap-5 animate-[heroFadeUp_1s_ease-out_0.6s_both]">
+            <span className="h-px w-16 sm:w-20 bg-gradient-to-r from-transparent via-[#d9b56f] to-[#d9b56f]" />
+
+            <p className="text-[#d9b56f] text-base md:text-lg font-semibold tracking-wide drop-shadow-[0_4px_14px_rgba(0,0,0,0.58)]">
+              17:00 horas
+            </p>
+
+            <span className="h-px w-16 sm:w-20 bg-gradient-to-l from-transparent via-[#d9b56f] to-[#d9b56f]" />
+          </div>
 
           <p className="max-w-2xl mx-auto text-base sm:text-lg md:text-xl leading-7 md:leading-8 mb-7 md:mb-11 drop-shadow-[0_4px_14px_rgba(0,0,0,0.58)] px-2 animate-[heroFadeUp_1s_ease-out_0.75s_both]">
             Estamos muito felizes em compartilhar esse momento especial com
             vocês...
           </p>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3 md:gap-4 max-w-3xl mx-auto mb-7 md:mb-12 animate-[heroFadeUp_1s_ease-out_0.9s_both]">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 md:gap-4 max-w-3xl mx-auto mb-7 md:mb-12 animate-[heroFadeUp_1s_ease-out_0.9s_both]">
             {[
               ["Dias", timeLeft.days],
               ["Horas", timeLeft.hours],
@@ -1632,40 +1855,58 @@ export default function WeddingSite() {
             ].map(([label, value], index) => (
               <div
                 key={String(label)}
-                className="group relative overflow-hidden bg-white/13 backdrop-blur-2xl rounded-2xl md:rounded-3xl px-3 py-4 md:p-6 border border-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.44),inset_0_-20px_38px_rgba(255,255,255,0.07),0_22px_54px_rgba(0,0,0,0.30)] transition-all duration-300 hover:scale-[1.018] hover:bg-white/18 hover:border-white/44 before:absolute before:inset-0 before:bg-[linear-gradient(120deg,transparent,rgba(255,255,255,0.20),transparent)] before:-translate-x-full hover:before:translate-x-full before:transition-transform before:duration-700"
-                style={{ animation: `heroFadeUp 0.9s ease-out ${0.95 + index * 0.08}s both` }}
+                className="group relative overflow-hidden bg-white/12 backdrop-blur-2xl rounded-2xl md:rounded-3xl px-2.5 py-3.5 md:p-6 border border-[#e2be74]/35 shadow-[inset_0_1px_0_rgba(255,255,255,0.38),inset_0_0_28px_rgba(255,231,179,0.08),0_18px_48px_rgba(0,0,0,0.28)] transition-all duration-300 hover:scale-[1.018] hover:bg-white/17 hover:border-[#f0d494]/48 before:absolute before:inset-0 before:bg-[linear-gradient(120deg,transparent,rgba(255,255,255,0.18),transparent)] before:-translate-x-full hover:before:translate-x-full before:transition-transform before:duration-700"
+                style={{
+                  animation: `heroFadeUp 0.9s ease-out ${0.95 + index * 0.08}s both`,
+                }}
               >
-                <div key={String(value)} className="relative z-10 font-[var(--font-title)] text-4xl sm:text-5xl md:text-6xl leading-none animate-[numberTick_0.38s_ease-out_both]">
+                <div
+                  key={String(value)}
+                  className="relative z-10 font-[var(--font-title)] text-3xl min-[380px]:text-4xl sm:text-5xl md:text-6xl leading-none animate-[numberTick_0.34s_ease-out_both]"
+                >
                   {value}
                 </div>
-                <div className="relative z-10 uppercase text-[10px] md:text-sm mt-2 tracking-widest opacity-95">
+                <div className="relative z-10 uppercase text-[9px] min-[380px]:text-[10px] md:text-sm mt-2 tracking-[0.18em] text-[#e7c98e] opacity-95">
                   {label}
                 </div>
               </div>
             ))}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 max-w-3xl mx-auto animate-[heroFadeUp_1s_ease-out_1.18s_both]">
-            <MenuButton onClick={() => openSection("confirmacao")}>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 md:gap-4 max-w-3xl mx-auto animate-[heroFadeUp_1s_ease-out_1.18s_both]">
+            <MenuButton
+              icon="calendar"
+              onClick={() => openSection("confirmacao")}
+            >
               Confirmar Presença
             </MenuButton>
 
-            <MenuButton onClick={() => openSection("local")}>Local</MenuButton>
+            <MenuButton icon="pin" onClick={() => openSection("local")}>
+              Local
+            </MenuButton>
 
-            <MenuButton onClick={() => openSection("presentes")}>
+            <MenuButton icon="gift" onClick={() => openSection("presentes")}>
               Presentes
             </MenuButton>
 
-            <MenuButton onClick={() => openSection("historia")}>
+            <MenuButton icon="heart" onClick={() => openSection("historia")}>
               Nossa História
             </MenuButton>
           </div>
         </div>
-
       </section>
 
       {activeSection === "confirmacao" && (
         <Section id="conteudo" title="Confirmar Presença" onBack={goHome}>
+          <div className="mb-6 rounded-[26px] border border-[#eadcc7] bg-white/64 p-5 text-center shadow-[0_16px_36px_rgba(80,50,20,0.08)]">
+            <p className="font-[var(--font-title)] text-3xl text-[#8a5b2b] md:text-4xl">
+              Sua presença tornará esse dia ainda mais especial.
+            </p>
+            <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-[#7a5b3a] md:text-base">
+              Confirme com carinho para prepararmos cada detalhe da recepção.
+            </p>
+          </div>
+
           <form onSubmit={handleSubmit} className="grid gap-4 md:gap-6">
             <Input
               name="name"
@@ -1692,7 +1933,6 @@ export default function WeddingSite() {
               onChange={handleChange}
               required
             />
-
 
             <Input
               name="guests"
@@ -1737,7 +1977,8 @@ export default function WeddingSite() {
               </p>
 
               <p className="text-base md:text-lg mb-6 leading-8 text-[#6d4c2f]">
-                Toque no botão para abrir a rota ou escaneie o QR Code com a câmera do celular.
+                Toque no botão para abrir a rota ou escaneie o QR Code com a
+                câmera do celular.
               </p>
 
               <div className="grid gap-3 sm:grid-cols-2">
@@ -1745,7 +1986,7 @@ export default function WeddingSite() {
                   href={GOOGLE_MAPS_URL}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex justify-center items-center bg-[#8a5b2b] hover:bg-[#74491f] text-white px-6 md:px-8 py-4 rounded-2xl shadow-lg transition-all hover:-translate-y-0.5"
+                  className="inline-flex justify-center items-center bg-[#8a5b2b] hover:bg-[#74491f] text-white px-6 md:px-5 sm:px-8 py-4 rounded-2xl shadow-lg transition-all hover:-translate-y-0.5"
                 >
                   Abrir no Google Maps
                 </a>
@@ -1754,7 +1995,7 @@ export default function WeddingSite() {
                   href={`https://waze.com/ul?q=${encodeURIComponent("Cerradu's Festa e Lazer")}&navigate=yes`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex justify-center items-center bg-[#f7efe3]/90 border border-[#caa36d] text-[#8a5b2b] px-6 md:px-8 py-4 rounded-2xl shadow-md transition-all hover:bg-white hover:-translate-y-0.5"
+                  className="inline-flex justify-center items-center bg-[#f7efe3]/90 border border-[#caa36d] text-[#8a5b2b] px-6 md:px-5 sm:px-8 py-4 rounded-2xl shadow-md transition-all hover:bg-white hover:-translate-y-0.5"
                 >
                   Abrir no Waze
                 </a>
@@ -1767,6 +2008,7 @@ export default function WeddingSite() {
                 alt="QR Code do local do casamento"
                 className="mx-auto rounded-2xl bg-white p-3 shadow-inner"
                 loading="lazy"
+                decoding="async"
               />
               <p className="mt-4 text-sm text-[#7a5b3a] leading-6">
                 Escaneie para abrir a localização no Google Maps.
@@ -1777,191 +2019,319 @@ export default function WeddingSite() {
       )}
 
       {activeSection === "presentes" && (
-        <Section id="conteudo" title="Lista de Presentes" wide onBack={goHome}>
-          <div className="mb-6 rounded-[28px] border border-white/70 bg-white/58 backdrop-blur-2xl p-4 md:p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.75),0_20px_55px_rgba(80,50,20,0.10)]">
-            <div className="mb-5">
-              <div className="mb-2 flex items-center justify-between gap-3 text-sm text-[#7a5b3a]">
-                <span>{giftStats.reserved} de {giftStats.total} presentes reservados</span>
-                <span>{giftStats.percentage}%</span>
+        <section
+          id="conteudo"
+          className="relative mx-auto w-full max-w-[1760px] px-3 py-6 sm:px-5 md:px-8 md:py-10 animate-[sectionReveal_0.75s_cubic-bezier(.2,.8,.2,1)_both]"
+        >
+          <div className="relative overflow-hidden rounded-[24px] border border-[#eadcc7]/80 bg-[#fbf8f2] px-4 py-7 sm:px-6 md:px-8 lg:px-10 shadow-[0_18px_55px_rgba(80,50,20,0.09)]">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(224,185,98,0.15),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(224,185,98,0.14),transparent_32%)]" />
+
+            <div className="relative z-10">
+              <div className="mb-7 text-center md:mb-8">
+                <h2 className="text-[2.35rem] leading-none sm:text-5xl md:text-[4rem] text-[#5f371f] tracking-[-0.03em]">
+                  Nossos Presentes
+                </h2>
+
+                <div className="mx-auto mt-4 flex max-w-[520px] items-center justify-center gap-3 text-[#d7a945]">
+                  <span className="h-px flex-1 bg-gradient-to-r from-transparent via-[#d7a945] to-[#d7a945]" />
+                  <span className="text-xl leading-none">❧</span>
+                  <span className="text-base leading-none">✧</span>
+                  <span className="text-xl leading-none">❧</span>
+                  <span className="h-px flex-1 bg-gradient-to-l from-transparent via-[#d7a945] to-[#d7a945]" />
+                </div>
+
+                <p className="mx-auto mt-5 max-w-[470px] text-[1.28rem] leading-[1.12] text-[#876c58] sm:text-[1.5rem]">
+                  Escolha um presente e nos ajude a construir
+                  <br className="hidden sm:block" /> nosso novo lar{' '}
+                  <span className="text-[#d8aa45]">♥</span>
+                </p>
               </div>
-              <div className="h-3 overflow-hidden rounded-full bg-[#eadcc7]">
-                <div
-                  className="h-full rounded-full bg-[linear-gradient(90deg,#8a5b2b,#caa36d)] transition-all duration-700"
-                  style={{ width: `${giftStats.percentage}%` }}
-                />
-              </div>
-            </div>
 
-            <div className="grid gap-3 lg:grid-cols-[1fr_220px_210px] lg:items-center">
-              <input
-                type="search"
-                value={giftSearch}
-                onChange={(e) => setGiftSearch(e.target.value)}
-                placeholder="Buscar presente por nome"
-                className="w-full rounded-2xl border border-[#d9c3a4]/80 bg-white/84 px-4 py-3 outline-none text-base shadow-inner focus:border-[#8a5b2b]"
-              />
-
-              <select
-                value={giftCategory}
-                onChange={(e) => setGiftCategory(e.target.value as GiftCategory)}
-                className="w-full rounded-2xl border border-[#d9c3a4]/80 bg-white/84 px-4 py-3 outline-none text-base focus:border-[#8a5b2b]"
-              >
-                <option value="todas">Todas as categorias</option>
-                <option value="pix">PIX</option>
-                <option value="cozinha">Cozinha</option>
-                <option value="eletro">Eletrodomésticos</option>
-                <option value="banho">Banho</option>
-                <option value="decoracao">Mesa e decoração</option>
-                <option value="organizacao">Organização</option>
-              </select>
-
-              <select
-                value={giftSort}
-                onChange={(e) => setGiftSort(e.target.value as GiftSort)}
-                className="w-full rounded-2xl border border-[#d9c3a4]/80 bg-white/84 px-4 py-3 outline-none text-base focus:border-[#8a5b2b]"
-              >
-                <option value="relevancia">Ordem original</option>
-                <option value="menor-preco">Menor preço</option>
-                <option value="maior-preco">Maior preço</option>
-                <option value="az">Nome A-Z</option>
-              </select>
-            </div>
-
-            <div className="mt-4 grid grid-cols-3 gap-2 text-xs sm:text-sm">
-              {[
-                ["todos", "Todos"],
-                ["disponiveis", "Disponíveis"],
-                ["reservados", "Reservados"],
-              ].map(([value, label]) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => setGiftFilter(value as GiftFilter)}
-                  className={`rounded-2xl border px-3 py-3 font-semibold transition-all ${
-                    giftFilter === value
-                      ? "bg-[#8a5b2b] text-white border-[#8a5b2b] shadow-lg"
-                      : "bg-[#f7efe3]/85 text-[#8a5b2b] border-[#caa36d] hover:bg-white"
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <p className="mb-5 text-sm md:text-base text-[#7a5b3a]">
-            {filteredGifts.length} {filteredGifts.length === 1 ? "presente encontrado" : "presentes encontrados"}.
-          </p>
-
-          {filteredGifts.length === 0 ? (
-            <div className="rounded-3xl border border-[#eadcc7] bg-[#f7efe3] p-8 text-center">
-              Nenhum presente encontrado com os filtros atuais.
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 min-[430px]:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5">
-              {filteredGifts.map((gift) => {
-                const isPix = gift.name === PIX_GIFT_NAME;
-                const reservedBy = isPix ? null : giftReservations[gift.name];
-
-                return (
+              <div className="mx-auto mb-7 max-w-[860px] rounded-[26px] border border-white/70 bg-white/64 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.78),0_18px_42px_rgba(80,50,20,0.09)] backdrop-blur-2xl sm:p-5">
+                <div className="mb-3 flex items-center justify-between gap-4 text-sm font-semibold text-[#684229] sm:text-base">
+                  <span>{giftStats.percentage}% do nosso novo lar já foi montado</span>
+                  <span className="text-[#b9892e]">{giftStats.reserved}/{giftStats.total}</span>
+                </div>
+                <div className="h-3 overflow-hidden rounded-full bg-[#eadcc7]">
                   <div
-                    key={gift.id}
-                    className="group border border-white/70 rounded-[22px] overflow-hidden shadow-[0_14px_38px_rgba(80,50,20,0.10)] bg-white/76 backdrop-blur-xl flex flex-col transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_22px_58px_rgba(80,50,20,0.18)]"
+                    className="h-full rounded-full bg-[linear-gradient(90deg,#b78325,#e8c46f,#fff0b8)] shadow-[0_0_18px_rgba(214,166,56,0.45)] transition-all duration-700"
+                    style={{ width: `${giftStats.percentage}%` }}
+                  />
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-3 text-center text-xs text-[#876c58] sm:grid-cols-3 sm:text-sm">
+                  <span className="rounded-2xl bg-[#f7efe3]/80 px-3 py-2">{giftStats.available} disponíveis</span>
+                  <span className="rounded-2xl bg-[#f7efe3]/80 px-3 py-2">{giftStats.reserved} reservados</span>
+                  <span className="col-span-2 rounded-2xl bg-[#f7efe3]/80 px-3 py-2 sm:col-span-1">PIX livre</span>
+                </div>
+              </div>
+
+              <div className="mx-auto mb-4 max-w-[1160px]">
+                <label className="relative block">
+                  <span className="pointer-events-none absolute left-5 top-1/2 z-10 -translate-y-1/2 text-lg text-[#bd8e35]">⌕</span>
+                  <input
+                    value={giftSearch}
+                    onChange={(e) => setGiftSearch(e.target.value)}
+                    placeholder="Pesquisar presente..."
+                    className="h-[58px] w-full rounded-[18px] border border-[#eadcc7] bg-white/70 pl-12 pr-4 text-base font-semibold text-[#684229] outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_10px_24px_rgba(80,50,20,0.06)] transition-all placeholder:text-[#a8927c] focus:border-[#d7a945] sm:text-lg"
+                  />
+                </label>
+              </div>
+
+              <div className="mx-auto mb-6 grid max-w-[1160px] grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+                {[
+                  ["todos", "🎁", "Todos"],
+                  ["disponiveis", "✓", "Disponíveis"],
+                  ["reservados", "▱", "Reservados"],
+                  ["pix", "❖", "PIX"],
+                ].map(([value, icon, label]) => {
+                  const active =
+                    value === "pix"
+                      ? giftCategory === "pix"
+                      : giftFilter === value && giftCategory !== "pix";
+
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => {
+                        if (value === "pix") {
+                          setGiftFilter("todos");
+                          setGiftCategory("pix");
+                          return;
+                        }
+
+                        setGiftFilter(value as GiftFilter);
+                        setGiftCategory("todas");
+                      }}
+                      className={`flex min-h-[54px] items-center justify-center gap-2 rounded-full border px-3 py-2.5 text-base font-semibold shadow-[0_8px_20px_rgba(80,50,20,0.07)] transition-all duration-300 sm:text-lg md:text-xl ${
+                        active
+                          ? "border-[#d7a945] bg-[linear-gradient(135deg,#d6a638,#e7c069)] text-white shadow-[0_12px_24px_rgba(201,151,45,0.30)]"
+                          : "border-[#eadcc7] bg-white/72 text-[#684229] hover:border-[#d7a945] hover:bg-white"
+                      }`}
+                    >
+                      <span className="text-lg leading-none md:text-xl">{icon}</span>
+                      <span>{label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="mx-auto mb-7 grid max-w-[1160px] gap-3 md:mb-8 md:grid-cols-2 md:gap-5">
+                <label className="relative block">
+                  <span className="pointer-events-none absolute left-6 top-1/2 z-10 -translate-y-1/2 text-[1.35rem] text-[#bd8e35]">
+                    ⊞
+                  </span>
+                  <select
+                    value={giftCategory}
+                    onChange={(e) => setGiftCategory(e.target.value as GiftCategory)}
+                    className="h-[58px] w-full appearance-none rounded-[14px] border border-[#e7d4b9] bg-white/56 pl-[3.7rem] pr-10 text-[1.25rem] font-semibold text-[#684229] outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] transition-all focus:border-[#d7a945]"
                   >
-                    <img
-                      src={gift.image}
-                      alt={gift.name}
-                      loading="lazy"
-                      className={
-                        isPix
-                          ? "w-full h-36 min-[430px]:h-32 md:h-40 object-contain bg-white p-4"
-                          : "w-full h-36 min-[430px]:h-32 md:h-40 object-contain bg-white p-3"
-                      }
-                    />
+                    <option value="todas">Categorias</option>
+                    <option value="cozinha">Cozinha</option>
+                    <option value="eletro">Eletrodomésticos</option>
+                    <option value="banho">Banho</option>
+                    <option value="decoracao">Mesa e decoração</option>
+                    <option value="organizacao">Organização</option>
+                    <option value="pix">PIX</option>
+                  </select>
+                  <span className="pointer-events-none absolute right-6 top-1/2 -translate-y-1/2 text-lg text-[#684229]">⌄</span>
+                </label>
 
-                    <div className="p-3 md:p-4 flex flex-col flex-1">
-                      <h3
-                        className="text-base min-[430px]:text-sm md:text-xl leading-5 md:leading-6 mb-2 overflow-hidden"
-                        style={{
-                          display: "-webkit-box",
-                          WebkitLineClamp: 3,
-                          WebkitBoxOrient: "vertical",
-                        }}
+                <label className="relative block">
+                  <span className="pointer-events-none absolute left-6 top-1/2 z-10 -translate-y-1/2 text-[1.35rem] text-[#bd8e35]">
+                    ≋
+                  </span>
+                  <select
+                    value={giftSort}
+                    onChange={(e) => setGiftSort(e.target.value as GiftSort)}
+                    className="h-[58px] w-full appearance-none rounded-[14px] border border-[#e7d4b9] bg-white/56 pl-[3.7rem] pr-10 text-[1.25rem] font-semibold text-[#684229] outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] transition-all focus:border-[#d7a945]"
+                  >
+                    <option value="relevancia">Ordenar</option>
+                    <option value="menor-preco">Menor preço</option>
+                    <option value="maior-preco">Maior preço</option>
+                    <option value="az">Nome A-Z</option>
+                  </select>
+                  <span className="pointer-events-none absolute right-6 top-1/2 -translate-y-1/2 text-lg text-[#684229]">⌄</span>
+                </label>
+              </div>
+
+              {filteredGifts.length === 0 ? (
+                <div className="rounded-[22px] border border-[#eadcc7] bg-white/70 p-8 text-center text-[#7a5b3a]">
+                  Nenhum presente encontrado com os filtros atuais.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-5 min-[620px]:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+                  {visibleGifts.map((gift, index) => {
+                    const isPix = gift.name === PIX_GIFT_NAME;
+                    const reservedBy = isPix ? null : giftReservations[gift.name];
+                    const isReserved = Boolean(reservedBy);
+
+                    return (
+                      <article
+                        key={gift.id}
+                        className="group relative overflow-hidden rounded-[18px] border border-white/70 bg-white/76 shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_8px_24px_rgba(80,50,20,0.07)] backdrop-blur-2xl transition-all duration-300 hover:-translate-y-1 hover:border-[#e3c17a] hover:bg-white/88 hover:shadow-[0_16px_38px_rgba(80,50,20,0.12)]"
+                        style={{ animation: `sectionReveal 0.58s ease-out ${Math.min(index, 12) * 0.035}s both` }}
                       >
-                        {gift.name}
-                      </h3>
 
-                      <p className="text-base md:text-lg mb-2 font-semibold">
-                        {gift.value || "Valor livre"}
-                      </p>
-
-                      {isPix && (
-                        <p className="text-xs md:text-sm mb-3 leading-5 text-[#7a5b3a]">
-                          Contribua com qualquer valor.
-                        </p>
-                      )}
-
-                      {reservedBy && (
-                        <p className="mb-3 rounded-xl bg-[#f7efe3] px-3 py-2 text-xs md:text-sm font-semibold text-[#7a5b3a]">
-                          Presente reservado
-                        </p>
-                      )}
-
-                      {reservedBy ? (
-                        <button
-                          type="button"
-                          disabled
-                          className="w-full bg-gray-400 text-white py-2.5 rounded-xl cursor-not-allowed text-xs md:text-sm font-semibold mt-auto"
+                        <span
+                          className={`absolute right-5 top-5 z-20 rounded-full px-3.5 py-1.5 text-sm font-bold shadow-sm ${
+                            isReserved
+                              ? "bg-[#ffd9dc] text-[#b31b1b]"
+                              : "bg-[#d9f2d2] text-[#248620]"
+                          }`}
                         >
-                          Presente Reservado
-                        </button>
-                      ) : (
-                        <>
+                          {isReserved ? "Reservado" : "Disponível"}
+                        </span>
+
+                        <div className="flex h-[205px] items-center justify-center bg-white/48 px-8 pb-1 pt-10 sm:h-[220px]">
+                          <img
+                            src={gift.image}
+                            alt={gift.name}
+                            loading="lazy"
+                            decoding="async"
+                            className={`max-h-full max-w-full object-contain transition-transform duration-300 group-hover:scale-[1.035] ${
+                              isPix ? "p-7" : ""
+                            }`}
+                          />
+                        </div>
+
+                        <div className="px-5 pb-5 pt-1 sm:px-6">
+                          <h3 className="min-h-[76px] text-[1.45rem] leading-[1.15] text-[#633b22] sm:text-[1.58rem]">
+                            {gift.name}
+                          </h3>
+
+                          {!isPix && gift.value && (
+                            <p className="mt-2 text-xl font-bold text-[#b78325]">{gift.value}</p>
+                          )}
+
+                          {isPix && (
+                            <p className="mt-2 text-sm leading-5 text-[#876c58]">
+                              Contribua com qualquer valor por PIX.
+                            </p>
+                          )}
+
                           <button
                             type="button"
+                            disabled={isReserved}
                             onClick={() => openGiftModal(gift)}
-                            className="w-full bg-[#8a5b2b] hover:bg-[#74491f] text-white py-2.5 rounded-xl transition-all text-xs md:text-sm font-semibold mt-auto"
+                            className={`mt-5 flex h-[54px] w-full items-center justify-center gap-2 rounded-[14px] text-[1.2rem] font-bold shadow-[0_10px_22px_rgba(178,126,31,0.18)] transition-all duration-300 ${
+                              isReserved
+                                ? "cursor-not-allowed bg-[#e8e1d8] text-[#9b8f82] shadow-none"
+                                : "bg-[linear-gradient(135deg,#d6a638,#e5ba5f)] text-white hover:brightness-105"
+                            }`}
                           >
-                            {isPix ? "Presentear via PIX" : "Quero Presentear"}
+                            <span>{isReserved ? "▱" : "🎁"}</span>
+                            <span>{isReserved ? "Reservado" : "Presentear"}</span>
                           </button>
 
-                          {gift.link && !isPix && (
+                          {!isPix && gift.link && (
                             <a
                               href={gift.link}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="mt-2 block w-full text-center bg-[#f7efe3] border border-[#caa36d] text-[#8a5b2b] py-2.5 rounded-xl transition-all text-xs md:text-sm font-semibold hover:bg-white"
+                              className="mt-3 flex h-[50px] w-full items-center justify-center gap-2 rounded-[14px] border border-[#d6a638] bg-white text-[1.08rem] font-bold text-[#9a6a17] shadow-[0_8px_18px_rgba(178,126,31,0.10)] transition-all duration-300 hover:bg-[#fff7e8] hover:brightness-105"
                             >
-                              Comprar na Havan
+                              <span>🛒</span>
+                              <span>Comprar na loja</span>
                             </a>
                           )}
-                        </>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
 
-          <div className="mt-10 flex justify-center">
-            <button
-              type="button"
-              onClick={goHome}
-              className="bg-[#f7efe3] border border-[#caa36d] text-[#8a5b2b] px-8 py-3 rounded-2xl shadow-md hover:bg-white transition-all font-semibold"
-            >
-              Voltar ao Início
-            </button>
+              {hasMoreGifts && (
+                <div className="mt-7 flex justify-center">
+                  <button
+                    type="button"
+                    onClick={() => setVisibleGiftCount((current) => current + 16)}
+                    className="rounded-2xl border border-[#d7a945] bg-white/78 px-7 py-3 text-base font-bold text-[#8a5b2b] shadow-[0_10px_24px_rgba(80,50,20,0.08)] backdrop-blur-xl transition-all hover:-translate-y-0.5 hover:bg-white"
+                  >
+                    Ver mais presentes ({filteredGifts.length - visibleGifts.length})
+                  </button>
+                </div>
+              )}
+
+              {(giftSearch || giftFilter !== "todos" || giftCategory !== "todas" || giftSort !== "relevancia") && (
+                <div className="mt-4 flex justify-center">
+                  <button
+                    type="button"
+                    onClick={clearGiftFilters}
+                    className="text-sm font-semibold text-[#8a5b2b] underline decoration-[#d7a945]/60 underline-offset-4"
+                  >
+                    Limpar filtros
+                  </button>
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() => {
+                  setGiftFilter("todos");
+                  setGiftCategory("pix");
+                  window.setTimeout(() => {
+                    document.getElementById("conteudo")?.scrollIntoView({
+                      behavior: "smooth",
+                      block: "start",
+                    });
+                  }, 50);
+                }}
+                className="mt-6 flex w-full items-center justify-between rounded-[18px] border border-[#eadcc7] bg-[#f6efe4]/82 px-5 py-4 text-left shadow-[0_8px_24px_rgba(80,50,20,0.07)] transition-all hover:bg-white"
+              >
+                <span className="flex items-center gap-4">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl text-3xl text-[#d6a638]">❖</span>
+                  <span>
+                    <span className="block text-[1.15rem] font-bold leading-tight text-[#633b22] sm:text-[1.3rem]">
+                      Prefere presentear via PIX? Fique à vontade!
+                    </span>
+                    <span className="mt-1 block text-sm leading-5 text-[#876c58] sm:text-base">
+                      É só escolher o presente PIX ou fazer um PIX direto para nós.
+                    </span>
+                  </span>
+                </span>
+                <span className="text-3xl text-[#9a7653]">›</span>
+              </button>
+
+              <div className="mt-7 flex justify-center">
+                <button
+                  type="button"
+                  onClick={goHome}
+                  className="rounded-2xl border border-[#d7a945] bg-white/72 px-7 py-3 text-base font-semibold text-[#7a4b2a] shadow-sm transition-all hover:bg-white"
+                >
+                  Voltar ao Início
+                </button>
+              </div>
+            </div>
           </div>
-        </Section>
+        </section>
       )}
 
       {activeSection === "historia" && (
         <Section id="conteudo" title="Nossa História" onBack={goHome}>
           <p className="text-base md:text-lg leading-8 md:leading-9 text-center">
-            Deus mudou o teu caminho até juntares com o meu e guardou a tua vida
-            separando-a para mim. Para onde fores, irei. Onde tu repousares,
-            repousarei. Teu Deus será o meu Deus. Teu caminho o meu será.
+            A história do casal se inicia de forma simples, mas com os planos de
+            Deus sendo escritos em cada detalhe. O noivo morava em Itaúba e a
+            noiva em Sinop. Em 2022, o noivo começou a frequentar a mesma igreja
+            que a noiva já fazia parte. Sem imaginar o que o futuro reservava,
+            os dois passaram a compartilhar o mesmo ambiente de fé, comunhão e
+            adoração. Com o passar do tempo, o noivo começou a olhar para a
+            noiva com carinho e admiração. Em oração, apresentou a Deus o desejo
+            que nascia em seu coração e, com muita fé, escreveu esse pedido em
+            um papel que foi levado pelo pastor da igreja em uma viagem para
+            Israel. O tempo continuou seguindo seu curso, e aos poucos os dois
+            começaram a se aproximar mais. A afinidade cresceu naturalmente,
+            especialmente porque ambos serviam juntos no departamento de louvor
+            da igreja, unidos pelo mesmo propósito e amor pela presença de Deus.
+            Entre conversas, risadas, ensaios e momentos compartilhados, nasceu
+            uma linda história de amor. Até que, no dia 10 de setembro de 2023,
+            aconteceu o tão esperado pedido de namoro — um momento marcante que
+            deu início oficialmente à caminhada dos dois como casal. Hoje,
+            depois de tantos planos, orações e confirmações, eles estão noivos e
+            prestes a viver uma nova etapa de suas vidas: o casamento. Uma
+            história construída com fé, amizade, amor e a certeza de que tudo
+            aconteceu no tempo perfeito de Deus.
           </p>
         </Section>
       )}
@@ -2010,7 +2380,8 @@ export default function WeddingSite() {
         }
 
         @keyframes heroBgBreath {
-          0%, 100% {
+          0%,
+          100% {
             filter: brightness(0.88) saturate(1.03) contrast(1.02);
           }
 
@@ -2020,7 +2391,8 @@ export default function WeddingSite() {
         }
 
         @keyframes goldLight {
-          0%, 100% {
+          0%,
+          100% {
             opacity: 0.42;
             transform: translateX(-1.5%) scale(1);
           }
@@ -2043,9 +2415,6 @@ export default function WeddingSite() {
           }
         }
 
-
-
-
         :global(:root) {
           --font-title: "Cormorant Garamond", Georgia, serif;
           --font-body: "Montserrat", system-ui, sans-serif;
@@ -2053,9 +2422,17 @@ export default function WeddingSite() {
 
         :global(body) {
           font-family: var(--font-body);
+          background: #f7f3ed;
         }
 
-        :global(h1), :global(h2), :global(h3) {
+        :global(::selection) {
+          background: rgba(215, 169, 69, 0.28);
+          color: #5f371f;
+        }
+
+        :global(h1),
+        :global(h2),
+        :global(h3) {
           font-family: var(--font-title);
         }
 
@@ -2086,7 +2463,8 @@ export default function WeddingSite() {
         }
 
         @keyframes cinemaGlow {
-          0%, 100% {
+          0%,
+          100% {
             opacity: 0.36;
             transform: translateX(-50%) scale(0.96);
           }
@@ -2096,22 +2474,31 @@ export default function WeddingSite() {
           }
         }
 
-        @keyframes filmSweep {
-          0%, 100% {
-            transform: translateX(-45%);
-            opacity: 0.05;
+        @keyframes loaderScreenIn {
+          from {
+            opacity: 0;
           }
-          50% {
-            transform: translateX(45%);
-            opacity: 0.14;
+          to {
+            opacity: 1;
           }
         }
 
-        @keyframes loaderContent {
+        @keyframes loaderScreenOut {
+          from {
+            opacity: 1;
+            visibility: visible;
+          }
+          to {
+            opacity: 0;
+            visibility: hidden;
+          }
+        }
+
+        @keyframes loaderContentIn {
           from {
             opacity: 0;
-            transform: translateY(18px) scale(0.98);
-            filter: blur(6px);
+            transform: translateY(22px) scale(0.97);
+            filter: blur(8px);
           }
           to {
             opacity: 1;
@@ -2120,20 +2507,60 @@ export default function WeddingSite() {
           }
         }
 
-        @keyframes loaderExit {
+        @keyframes loaderContentOut {
+          from {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            filter: blur(0);
+          }
           to {
             opacity: 0;
-            visibility: hidden;
+            transform: translateY(-18px) scale(1.025);
+            filter: blur(8px);
           }
         }
 
         @keyframes musicPulse {
-          0%, 100% {
-            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.22);
+          0%,
+          100% {
+            box-shadow:
+              0 10px 28px rgba(0, 0, 0, 0.20),
+              inset 0 1px 0 rgba(255, 255, 255, 0.75);
           }
 
           50% {
-            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.22), 0 0 0 8px rgba(255, 255, 255, 0.14);
+            box-shadow:
+              0 10px 28px rgba(0, 0, 0, 0.20),
+              0 0 0 7px rgba(231, 201, 142, 0.10),
+              inset 0 1px 0 rgba(255, 255, 255, 0.75);
+          }
+        }
+
+
+        @keyframes whatsappPulse {
+          0%,
+          100% {
+            box-shadow:
+              0 10px 28px rgba(0, 0, 0, 0.22),
+              inset 0 1px 0 rgba(255, 255, 255, 0.75);
+          }
+
+          50% {
+            box-shadow:
+              0 10px 28px rgba(0, 0, 0, 0.22),
+              0 0 0 7px rgba(231, 201, 142, 0.10),
+              inset 0 1px 0 rgba(255, 255, 255, 0.75);
+          }
+        }
+
+        @keyframes modalEntrance {
+          from {
+            opacity: 0;
+            transform: translateY(18px) scale(0.96);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
           }
         }
       `}</style>
@@ -2143,10 +2570,10 @@ export default function WeddingSite() {
 
 function LoadingScreen() {
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden bg-[#120d08] text-white animate-[loaderExit_0.55s_ease-in_1.15s_both]">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(214,174,102,0.24),transparent_42%),linear-gradient(180deg,rgba(0,0,0,0.20),rgba(0,0,0,0.72))]" />
-      <div className="absolute inset-0 opacity-[0.08] bg-[radial-gradient(circle_at_1px_1px,white_1px,transparent_0)] [background-size:4px_4px]" />
-      <div className="relative text-center px-6 animate-[loaderContent_1s_cubic-bezier(.2,.8,.2,1)_both]">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden bg-[#100b07] text-white animate-[loaderScreenIn_0.7s_ease-out_both,loaderScreenOut_0.85s_ease-in-out_3.15s_both]">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(222,181,105,0.30),transparent_45%),linear-gradient(180deg,rgba(0,0,0,0.18),rgba(0,0,0,0.80))]" />
+      <div className="absolute -top-32 left-1/2 h-80 w-[760px] -translate-x-1/2 rounded-full bg-[#e7c98e]/20 blur-3xl" />
+      <div className="relative text-center px-6 animate-[loaderContentIn_1.1s_cubic-bezier(.2,.8,.2,1)_0.25s_both,loaderContentOut_0.75s_ease-in-out_3.05s_both]">
         <p className="uppercase tracking-[0.45em] text-[10px] md:text-xs text-[#e7c98e] mb-4">
           convite de casamento
         </p>
@@ -2154,65 +2581,10 @@ function LoadingScreen() {
           Larissa &amp; Vinicius
         </h2>
         <div className="mx-auto mt-7 h-[1px] w-40 bg-gradient-to-r from-transparent via-[#e7c98e] to-transparent" />
+        <p className="mt-5 text-sm md:text-base text-white/74 tracking-[0.18em]">
+          15 de Janeiro de 2027
+        </p>
       </div>
-    </div>
-  );
-}
-
-function FallingFlowers() {
-  const petals = Array.from({ length: 8 });
-
-  return (
-    <div className="pointer-events-none fixed inset-0 z-40 overflow-hidden hidden sm:block">
-      {petals.map((_, index) => (
-        <span
-          key={index}
-          className="absolute block rounded-full animate-[petalFall_22s_linear_infinite]"
-          style={{
-            left: `${(index * 12.5) % 100}%`,
-            top: "-40px",
-            width: `${7 + (index % 4) * 3}px`,
-            height: `${12 + (index % 5) * 3}px`,
-            background:
-              "radial-gradient(circle at 35% 30%, rgba(255,255,255,0.95), rgba(244,179,195,0.58) 45%, rgba(213,122,145,0.28) 100%)",
-            boxShadow: "0 2px 8px rgba(255, 190, 205, 0.18)",
-            opacity: 0.36,
-            transform: `rotate(${index * 23}deg)`,
-            animationDelay: `${index * 2.2}s`,
-            animationDuration: `${20 + (index % 6)}s`,
-          }}
-        />
-      ))}
-
-      <style jsx>{`
-        @keyframes petalFall {
-          0% {
-            transform: translate3d(0, -10vh, 0) rotate(0deg);
-            opacity: 0;
-          }
-
-          12% {
-            opacity: 0.35;
-          }
-
-          40% {
-            transform: translate3d(25px, 35vh, 0) rotate(90deg);
-          }
-
-          70% {
-            transform: translate3d(-18px, 70vh, 0) rotate(180deg);
-          }
-
-          90% {
-            opacity: 0.3;
-          }
-
-          100% {
-            transform: translate3d(16px, 110vh, 0) rotate(260deg);
-            opacity: 0;
-          }
-        }
-      `}</style>
     </div>
   );
 }
@@ -2241,7 +2613,8 @@ function LightParticles() {
 
       <style jsx>{`
         @keyframes lightFloat {
-          0%, 100% {
+          0%,
+          100% {
             transform: translate3d(0, 0, 0) scale(1);
             opacity: 0.12;
           }
@@ -2270,16 +2643,49 @@ function LightParticles() {
 type MenuButtonProps = {
   children: ReactNode;
   onClick: () => void;
+  icon: "calendar" | "pin" | "gift" | "heart";
 };
 
-function MenuButton({ children, onClick }: MenuButtonProps) {
+function MenuButton({ children, onClick, icon }: MenuButtonProps) {
+  const icons = {
+    calendar: (
+      <path d="M7 2v3M17 2v3M3 8h18M5 4h14a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Zm4 9 2 2 4-5" />
+    ),
+    pin: (
+      <path d="M12 21s7-5.3 7-12a7 7 0 1 0-14 0c0 6.7 7 12 7 12Zm0-9.5A2.5 2.5 0 1 0 12 6a2.5 2.5 0 0 0 0 5.5Z" />
+    ),
+    gift: (
+      <path d="M20 12v9H4v-9M2 7h20v5H2V7Zm10 0v14M12 7H8.5A2.5 2.5 0 1 1 12 4.5V7Zm0 0h3.5A2.5 2.5 0 1 0 12 4.5V7Z" />
+    ),
+    heart: (
+      <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z" />
+    ),
+  };
+
   return (
     <button
       type="button"
       onClick={onClick}
-      className="relative overflow-hidden bg-white/86 text-[#8a5b2b] border border-white/72 backdrop-blur-xl hover:bg-white hover:text-[#74491f] py-[16px] md:py-[18px] rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.18)] transition-all duration-300 font-semibold text-sm md:text-base hover:scale-[1.012] hover:-translate-y-0.5 hover:shadow-[0_14px_38px_rgba(0,0,0,0.24)] before:absolute before:inset-0 before:bg-[linear-gradient(115deg,transparent,rgba(255,255,255,0.58),transparent)] before:-translate-x-full hover:before:translate-x-full before:transition-transform before:duration-700"
+      className="group relative overflow-hidden rounded-xl border border-white/75 bg-white/90 px-2.5 py-3 sm:px-3 sm:py-4 text-[#9b7634] shadow-[0_12px_32px_rgba(0,0,0,0.25)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:bg-white hover:text-[#7b5820] hover:shadow-[0_18px_42px_rgba(0,0,0,0.32)]"
     >
-      <span className="relative z-10">{children}</span>
+      <span className="absolute inset-0 bg-gradient-to-r from-transparent via-[#d9b56f]/20 to-transparent -translate-x-full transition-transform duration-700 group-hover:translate-x-full" />
+
+      <span className="relative z-10 flex items-center justify-center gap-1.5 sm:gap-2.5 text-[11px] min-[380px]:text-xs sm:text-sm md:text-base font-semibold">
+        <svg
+          viewBox="0 0 24 24"
+          className="h-4 w-4 sm:h-5 sm:w-5 shrink-0 text-[#b58a3a]"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          {icons[icon]}
+        </svg>
+
+        <span className="leading-tight">{children}</span>
+      </span>
     </button>
   );
 }
@@ -2296,7 +2702,7 @@ function Section({ id, title, children, wide = false, onBack }: SectionProps) {
   return (
     <section
       id={id}
-      className={`${wide ? "max-w-7xl" : "max-w-4xl"} mx-auto px-3 sm:px-4 md:px-6 py-8 md:py-20 animate-[sectionReveal_0.75s_cubic-bezier(.2,.8,.2,1)_both]`}
+      className={`${wide ? "max-w-7xl" : "max-w-4xl"} mx-auto px-3 sm:px-4 md:px-6 py-8 md:py-14 sm:py-20 animate-[sectionReveal_0.75s_cubic-bezier(.2,.8,.2,1)_both]`}
     >
       <div className="relative overflow-hidden bg-white/72 backdrop-blur-2xl rounded-[24px] md:rounded-[40px] p-4 sm:p-5 md:p-12 shadow-[inset_0_1px_0_rgba(255,255,255,0.78),0_28px_80px_rgba(80,50,20,0.14)] border border-white/70 before:pointer-events-none before:absolute before:inset-0 before:bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.75),transparent_32%)]">
         <div className="relative z-10 flex flex-col md:flex-row justify-between items-center mb-6 md:mb-10 gap-4">
