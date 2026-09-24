@@ -39,6 +39,15 @@ type GiftResponse = {
   gifts?: Record<string, string>;
 };
 
+type GiftPriceResponse = {
+  prices?: Record<string, string>;
+  updatedAt?: string;
+  total?: number;
+  updated?: number;
+  failed?: Array<{ id: number; url: string; reason?: string }>;
+  error?: string;
+};
+
 type GiftFilter = "todos" | "disponiveis" | "reservados";
 type GiftSort = "relevancia" | "menor-preco" | "maior-preco" | "az";
 type GiftCategory =
@@ -236,11 +245,11 @@ const gifts: Gift[] = [
   },
   {
     id: 9,
-    name: "Aspirador de Pó e Água Electrolux 11 Litros Smart 1400W A10N1",
-    value: "R$ 399,90",
+    name: "Aspirador Pó e Água WAP GTW Inox 20 com Soprador 1600W 160Mbar 20 Litros",
+    value: "R$ 391,41",
     image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/a/s/aspirador-de-po-e-agua-electrolux-11-litros-smart-1400w-a10n1_940375_1.webp",
-    link: "https://www.havan.com.br/aspirador-de-po-e-agua-electrolux-11-litros-smart-1400w-a10n1/p",
+      "https://http2.mlstatic.com/D_NQ_NP_2X_688766-MLU72675480418_112023-F.webp",
+    link: "https://www.mercadolivre.com.br/aspirador-po-e-agua-wap-gtw-inox-20-com-soprador-1600w-160mbar-20-litros/p/MLB6346501?product_trigger_id=MLB6346502&attributes=COLOR%3APrata%2FPreto%2CVOLTAGE%3AMLB6346501&picker=true&matt_event_ts=1789186024967&matt_d2id=5b4df4ab-c7e3-4a4d-bcfe-00872f65a1f9&matt_tracing_id=82b58ef5-2130-4785-9af3-004ab0e1fefd&quantity=1",
   },
   {
     id: 10,
@@ -866,6 +875,70 @@ const gifts: Gift[] = [
       "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/m/e/meleira-soho-em-cristal-l-hermitage-360ml_1173330.webp",
     link: "https://www.havan.com.br/meleira-soho-em-cristal-l-hermitage-360ml-transparente/p",
   },
+  {
+    id: 89,
+    name: "Lavadora de Alta Pressão Wap 2000W WL4000",
+    value: "R$ 1.099,90",
+    image:
+      "https://www.havan.com.br/media/catalog/product/cache/74c1057f7991b4edb2bc7bdaa94de933/l/a/lavadora-de-alta-pressao-wap-2000w-wl4000_900362_1.webp",
+    link: "https://www.havan.com.br/lavadora-de-alta-pressao-wap-2000w-wl4000/p",
+  },
+  {
+    id: 90,
+    name: "Samsung Vision AI TV 48 Polegadas OLED 4K S85H + Soundbar Samsung B450F",
+    value: "R$ 5.509,05",
+    image:
+      "https://samsungbrshop.vtexassets.com/arquivos/ids/298299-600-auto?v=639239674745600000",
+    link: "https://shop.samsung.com/br/samsung-vision-ai-tv-48-oled-4k-s85h-mais-soundbar-samsung-b450f/p?idsku=16047&cid=br_pd_pmax_google_tv_always-on_23892438845-pmax-teste-tv-ce-aon-seda-gads-monks_multi_idF-QN48S85B450F-6717397569_conversion&keeplink=true&gad_source=1&gad_campaignid=23892445880&gbraid=0AAAAADJayZ3Qqv16_19zpjoBbltL7b0k1&gclid=Cj0KCQjw8c3VBhCsARIsAA_xJ92Gr-_z5aHriDzidSsTeg8RacISOn7M818vISHD6ABpq6w-hxyZbS8aAilREALw_wcB",
+  },
+  {
+    id: 91,
+    name: "Máquina de Lavar Brastemp",
+    value: "R$ 2.697,05",
+    image:
+      "https://brastemp.vtexassets.com/arquivos/ids/293054-828-auto/01_Brastemp_Lavadora_BWK14BB_Imagem_Frontal.webp?v=639220497857030000&quality=80",
+    link: "https://www.brastemp.com.br/maquina-de-lavar-brastemp-14kg-branca-com-ciclo-tira-manchas-advanced-e-smart-sensor-bwk14bb/p?_gl=1*ltvoj2*_up*MQ..*_gs*MQ..&gclid=Cj0KCQjwh4TVBhCWARIsAG0czmokD2nyoUuX3-RsfJqZdZ13lfRWnTOC6eyK3IW5Kd3gkGv1RW6ry3saAnu_EALw_wcB&gbraid=0AAAAADJ0Bqpdw506QOR4FEzjiCML6YGmm",
+  },
+  {
+    id: 92,
+    name: "Cooktop 4 Bocas Dako Supreme Com Mesa de Vidro e Tripla Chama Preto Bivol",
+    value: "R$ 488,05",
+    image:
+      "https://http2.mlstatic.com/D_NQ_NP_2X_912486-MLA100063714741_122025-F.webp",
+    link: "http://mercadolivre.com.br/cooktop-4-bocas-dako-supreme-com-mesa-de-vidro-e-tripla-chama-preto-bivolt/p/MLB23455094#polycard_client=search-desktop&be_origin=backend&overlay_label=not_apply&search_layout=grid&position=17&type=product&tracking_id=87da1fc4-5837-41ec-9ddf-174f1e26d77b&wid=MLB6755799384&sid=search",
+  },
+  {
+    id: 93,
+    name: "Chuveiro Acqua Duo Preto Fosco Black Matte 5500w Lorenzetti",
+    value: "R$ 654,41",
+    image:
+      "https://http2.mlstatic.com/D_NQ_NP_2X_843200-MLU77341664949_062024-F.webp",
+    link: "https://www.mercadolivre.com.br/chuveiro-acqua-duo-preto-fosco-black-matte-5500w-lorenzetti/p/MLB25170948?product_trigger_id=MLB73781562&attributes=POWER%3A7.8+kW%2CCOLOR%3APrateado%2CVOLTAGE%3AMLB25170948&pdp_filters=item_id%3AMLB6207170536&applied_product_filters=MLB26884984&picker=true&quantity=1",
+  },
+  {
+    id: 94,
+    name: "Panificadora Multipane 12 Programações Com Função Timer e Antiaderente Potência de 550 W Cor Preto Britânia",
+    value: "R$ 888",
+    image:
+      "https://http2.mlstatic.com/D_NQ_NP_2X_873422-MLA40301247641_012020-F.webp",
+    link: "https://www.mercadolivre.com.br/panificadora-multipane-12-programacoes-com-funcao-timer-e-antiaderente-potencia-de-550-w-cor-preto-britania/p/MLB14489716?product_trigger_id=MLB15278925&attributes=COLOR%3APreto%2CVOLTAGE%3AMLB14489716&pdp_filters=item_id%3AMLB1942049735&applied_product_filters=MLB15278925&picker=true&quantity=1",
+  },
+  {
+    id: 95,
+    name: "Geladeira Inteligente com Flex Freeze B= Smart Brastemp Frost Free Inverse Inox",
+    value: "R$ 4.899,99",
+    image:
+      "https://brastemp.vtexassets.com/arquivos/ids/288175-828-auto/Brastemp_Geladeira_BRE68AK_Imagem_Frontal.webp?v=639160190448000000&quality=80",
+    link: "https://www.brastemp.com.br/geladeira-inteligente-b--smart-brastemp-frost-free-inverse-477-litros-inox---bre68ak-326199093/p",
+  },
+  {
+    id: 96,
+    name: "Lava-Louças Electrolux 10 Serviços LL10X com Função Higienizar Inox",
+    value: "R$ 3.361,46",
+    image:
+      "https://http2.mlstatic.com/D_NQ_NP_2X_646778-MLA92016050767_092025-F.webp",
+    link: "https://www.mercadolivre.com.br/lava-loucas-electrolux-10-servicos-ll10x-com-funcao-higienizar-inox/p/MLB36263784?product_trigger_id=MLB36263784&attributes=COLOR%3ACinza%2CVOLTAGE%3AMLB36263784&picker=true&quantity=1",
+  },
 ];
 
 /* =========================================================
@@ -910,6 +983,14 @@ export default function WeddingSite() {
   const [giftReservations, setGiftReservations] = useState<
     Record<string, string>
   >({});
+  const [giftPrices, setGiftPrices] = useState<Record<string, string>>({});
+  const [giftPricesLoading, setGiftPricesLoading] = useState(false);
+  const [giftPricesUpdatedAt, setGiftPricesUpdatedAt] = useState<string | null>(null);
+  const [giftPricesStatus, setGiftPricesStatus] = useState<string | null>(null);
+
+  // Atualiza os preços automaticamente enquanto o site estiver aberto.
+  // A cada 6 horas fazemos uma consulta forçada, sem usar o cache da API.
+  const GIFT_PRICE_REFRESH_INTERVAL_MS = 6 * 60 * 60 * 1000;
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [rsvpConfirmation, setRsvpConfirmation] =
     useState<RsvpConfirmation>(null);
@@ -987,6 +1068,118 @@ export default function WeddingSite() {
     };
   }, []);
 
+  const loadGiftPrices = useRef(
+    async (options?: { force?: boolean; signalCancelled?: () => boolean }) => {
+      const products = gifts
+        .filter((gift) => gift.name !== PIX_GIFT_NAME && gift.link)
+        .map((gift) => ({ id: gift.id, url: gift.link as string }));
+
+      if (!products.length) return { ok: false as const };
+
+      setGiftPricesLoading(true);
+
+      try {
+        const response = await fetch("/api/gift-prices", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ products, force: options?.force === true }),
+        });
+
+        if (!response.ok) throw new Error("Falha ao consultar preços.");
+
+        const data = (await response.json()) as GiftPriceResponse & {
+          forced?: boolean;
+        };
+
+        if (!options?.signalCancelled?.()) {
+          if (data?.prices) {
+            setGiftPrices((previous) => ({
+              ...previous,
+              ...data.prices,
+            }));
+          }
+
+          setGiftPricesUpdatedAt(data.updatedAt ?? new Date().toISOString());
+
+          const total = Number(data.total ?? products.length);
+          const updated = Number(data.updated ?? Object.keys(data.prices ?? {}).length);
+          const failed = Array.isArray(data.failed) ? data.failed.length : 0;
+
+          setGiftPricesStatus(
+            failed > 0
+              ? `${updated} preços atualizados • ${failed} não puderam ser consultados`
+              : `${updated} de ${total} preços atualizados com sucesso`,
+          );
+
+          if (failed > 0) {
+            console.warn("Presentes que não puderam ser atualizados:", data.failed);
+          }
+        }
+
+        return { ok: true as const, forced: Boolean(data?.forced), failed: data.failed ?? [] };
+      } catch (error) {
+        console.error("Erro ao atualizar preços dos presentes:", error);
+        return { ok: false as const };
+      } finally {
+        if (!options?.signalCancelled?.()) setGiftPricesLoading(false);
+      }
+    },
+  ).current;
+
+  useEffect(() => {
+    let cancelled = false;
+
+    // Consulta inicial ao abrir o site.
+    void loadGiftPrices({ signalCancelled: () => cancelled });
+
+    // Consulta automática a cada 6 horas, forçando a busca nos anúncios.
+    const interval = window.setInterval(() => {
+      if (!cancelled && !document.hidden) {
+        void loadGiftPrices({ force: true, signalCancelled: () => cancelled });
+      }
+    }, GIFT_PRICE_REFRESH_INTERVAL_MS);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [loadGiftPrices, GIFT_PRICE_REFRESH_INTERVAL_MS]);
+
+  // Quando o usuário volta para a aba, também atualizamos os preços.
+  useEffect(() => {
+    function handleVisibilityChange() {
+      if (!document.hidden) {
+        void loadGiftPrices({ force: true });
+      }
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () =>
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [loadGiftPrices]);
+
+  // Atalho discreto (Ctrl/Cmd + Shift + P) para forçar uma atualização
+  // dos preços dos presentes, ignorando o cache de 6h. Sem senha nem
+  // token: apertou, o site busca os preços de novo nos anúncios.
+  useEffect(() => {
+    function handleForceRefreshShortcut(event: KeyboardEvent) {
+      const isShortcut =
+        (event.ctrlKey || event.metaKey) &&
+        event.shiftKey &&
+        (event.key === "P" || event.key === "p");
+
+      if (!isShortcut) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      void loadGiftPrices({ force: true });
+    }
+
+    window.addEventListener("keydown", handleForceRefreshShortcut);
+    return () => window.removeEventListener("keydown", handleForceRefreshShortcut);
+  }, [loadGiftPrices]);
+
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -1008,7 +1201,18 @@ export default function WeddingSite() {
       MEMOS
     ========================================================= */
 
-  const normalizedGifts = useMemo(() => gifts.map(normalizeGift), []);
+  const normalizedGifts = useMemo(
+    () =>
+      gifts.map((gift) => {
+        const normalized = normalizeGift(gift);
+        const livePrice = giftPrices[String(gift.id)];
+
+        return livePrice
+          ? { ...normalized, value: livePrice }
+          : normalized;
+      }),
+    [giftPrices],
+  );
 
   const filteredGifts = useMemo(() => {
     const search = removeAccents(giftSearch).toLowerCase().trim();
@@ -2063,6 +2267,26 @@ export default function WeddingSite() {
                   <span className="rounded-2xl bg-[#f7efe3]/80 px-3 py-2">{giftStats.reserved} reservados</span>
                   <span className="col-span-2 rounded-2xl bg-[#f7efe3]/80 px-3 py-2 sm:col-span-1">PIX livre</span>
                 </div>
+              </div>
+
+              <div className="mx-auto mb-4 flex max-w-[1160px] flex-wrap items-center justify-between gap-2 rounded-2xl border border-[#eadcc7] bg-white/58 px-4 py-3 text-sm text-[#7a5b3a] shadow-[0_8px_20px_rgba(80,50,20,0.05)]">
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`h-2.5 w-2.5 rounded-full ${
+                      giftPricesLoading ? "animate-pulse bg-[#d7a945]" : "bg-[#58a65c]"
+                    }`}
+                  />
+                  <span>
+                    {giftPricesLoading
+                      ? "Atualizando preços dos anúncios..."
+                      : giftPricesStatus ?? "Preços sincronizados com os anúncios"}
+                  </span>
+                </div>
+                <span className="text-xs text-[#9a8064]">
+                  {giftPricesUpdatedAt
+                    ? `Última consulta: ${new Date(giftPricesUpdatedAt).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}`
+                    : "Os valores atuais dos anúncios serão carregados automaticamente"}
+                </span>
               </div>
 
               <div className="mx-auto mb-4 max-w-[1160px]">
