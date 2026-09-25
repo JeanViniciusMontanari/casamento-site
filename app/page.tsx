@@ -80,6 +80,8 @@ const GOOGLE_SCRIPT_URL =
 const GOOGLE_MAPS_URL = "https://maps.app.goo.gl/L1cr1U27FxV6tqaUA";
 
 const WEDDING_DATE = new Date("2027-01-15T17:00:00");
+const GIFT_PRICE_REFRESH_INTERVAL_MS = 6 * 60 * 60 * 1000;
+const LIGHT_PARTICLE_INDICES = Array.from({ length: 18 }, (_, index) => index);
 const MUSIC_START_TIME = 261;
 const MUSIC_VOLUME = 0.35;
 const MUSIC_FADE_IN_DURATION = 1800;
@@ -99,17 +101,13 @@ function cleanText(value: string) {
   return value.trim().replace(/\s+/g, " ");
 }
 
-function cleanUrl(value?: string) {
-  return value?.trim();
-}
-
 function normalizeGift(gift: Gift): Gift {
   return {
     ...gift,
     name: cleanText(gift.name),
     value: cleanText(gift.value),
     image: cleanText(gift.image),
-    link: cleanUrl(gift.link),
+    link: gift.link?.trim(),
   };
 }
 
@@ -141,7 +139,9 @@ function parseGiftPrice(value: string) {
     .replace(",", ".");
 
   const price = Number(numeric);
-  return Number.isFinite(price) ? price : 0;
+  return numeric && Number.isFinite(price) && price > 0
+    ? price
+    : Number.POSITIVE_INFINITY;
 }
 
 function getGiftCategory(gift: Gift): GiftCategory {
@@ -149,12 +149,12 @@ function getGiftCategory(gift: Gift): GiftCategory {
 
   if (gift.name === PIX_GIFT_NAME) return "pix";
 
-  if (/toalha|travesseiro|banheiro|algodao|cotonete/.test(name)) {
+  if (/toalha|travesseiro|banheiro|chuveiro|algodao|cotonete/.test(name)) {
     return "banho";
   }
 
   if (
-    /aspirador|grill|sanduicheira|panela de arroz|liquidificador|forno|mixer|chaleira eletrica|torradeira|batedeira|processador|passadeira/.test(
+    /aspirador|grill|sanduicheira|panela de arroz|liquidificador|forno|mixer|chaleira eletrica|torradeira|batedeira|processador|passadeira|lavadora|maquina de lavar|lava loucas|geladeira|panificadora/.test(
       name,
     )
   ) {
@@ -189,755 +189,325 @@ const gifts: Gift[] = [
   },
   {
     id: 2,
-    name: "Forma Média Filetada Redonda Marinex 1,3 Litros - Vidro",
-    value: "R$ 24,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/f/o/forma-media-filetada-redonda-1-3-litros-marinex_1116402.webp",
-    link: "https://www.havan.com.br/forma-media-filetada-redonda-1-3-litros-marinex-vidro/p",
-  },
-  {
-    id: 3,
-    name: "Forma Redonda Com Fundo Removível Havan Casa 28Cm - Preto",
-    value: "R$ 49,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/f/o/forma-redonda-fundo-removivel-28cm-solecasa_1109304.webp",
-    link: "https://www.havan.com.br/forma-redonda-com-fundo-removivel-havan-casa-28cm-preto/p",
-  },
-  {
-    id: 4,
-    name: "Conjunto Para Churrasco Com 4 Peças Havan - Inox",
-    value: "R$ 99,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/c/o/conjunto-para-churrasco-com-4-pecas-mb5077_207233_2.webp",
-    link: "https://www.havan.com.br/conjunto-para-churrasco-com-4-pecas-mb5077-inox/p",
-  },
-  {
-    id: 5,
-    name: "Toalha de Banho 100% Algodão Unika Karsten 1 Pç - Branco",
-    value: "R$ 79,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/t/o/toalha-de-banho-unika-karsten_1055765.webp",
-    link: "https://www.havan.com.br/toalha-de-banho-unika-karsten-branco/p",
-  },
-  {
-    id: 6,
-    name: "Forma De Pudim Antiaderente Havan Casa 23Cm - Aço",
-    value: "R$ 49,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/f/o/forma-para-pudim-antiaderente-havan-casa-23cm_1110270.webp",
-    link: "https://www.havan.com.br/forma-para-pudim-antiaderente-havan-casa-23cm-ao/p",
-  },
-  {
-    id: 7,
     name: "Chaleira com Apito Diamond Havan Casa 2,7 Litros - Baunilha",
     value: "R$ 129,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/c/h/chaleira-com-apito-diamond-havan-casa-2-7-litros_1149637.webp",
+    image: "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/c/h/chaleira-com-apito-diamond-havan-casa-2-7-litros_1149637.webp",
     link: "https://www.havan.com.br/chaleira-com-apito-diamond-havan-casa-2-7-litros-baunilha/p",
   },
   {
-    id: 8,
-    name: "Forma Retangular Antiaderente Havan Casa 40,5Cm - Cinza",
-    value: "R$ 49,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/f/o/forma-retangular-antiaderente-havan-casa-40-5cm_1033356.webp",
-    link: "https://www.havan.com.br/forma-retangular-antiaderente-havan-casa-40-5cm-cinza/p",
-  },
-  {
-    id: 9,
+    id: 3,
     name: "Aspirador Pó e Água WAP GTW Inox 20 com Soprador 1600W 160Mbar 20 Litros",
     value: "R$ 391,41",
-    image:
-      "https://http2.mlstatic.com/D_NQ_NP_2X_688766-MLU72675480418_112023-F.webp",
-    link: "https://www.mercadolivre.com.br/aspirador-po-e-agua-wap-gtw-inox-20-com-soprador-1600w-160mbar-20-litros/p/MLB6346501?product_trigger_id=MLB6346502&attributes=COLOR%3APrata%2FPreto%2CVOLTAGE%3AMLB6346501&picker=true&matt_event_ts=1789186024967&matt_d2id=5b4df4ab-c7e3-4a4d-bcfe-00872f65a1f9&matt_tracing_id=82b58ef5-2130-4785-9af3-004ab0e1fefd&quantity=1",
+    image: "https://http2.mlstatic.com/D_NQ_NP_2X_688766-MLU72675480418_112023-F.webp",
+    link: "https://www.mercadolivre.com.br/aspirador-po-e-agua-wap-gtw-inox-20-com-soprador-1600w-160mbar-20-litros/p/MLB6346501",
   },
   {
-    id: 10,
-    name: "Jogo De Churrasco 3 Peças Tramontina - 10239/604",
-    value: "R$ 79,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/c/o/conjunto-tabua-para-churrasco-com-garfo-e-faca-tramontina_1182504.webp",
-    link: "https://www.havan.com.br/conjunto-tabua-para-churrasco-com-garfo-e-faca-tramontina-10239604/p",
-  },
-  {
-    id: 11,
-    name: "Bandeja De Bambu Com Alça Havan Casa - 40CM",
-    value: "R$ 79,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/b/a/bandeja-de-bambu-com-alca-havan-casa_1086467.webp",
-    link: "https://www.havan.com.br/bandeja-de-bambu-com-alca-havan-casa-40cm/p",
-  },
-  {
-    id: 12,
+    id: 4,
     name: "Jogo De Facas Plenus 05 Peças E Suporte Madeira Tramontina - Preto e Madeira",
     value: "R$ 129,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/j/o/jogo-de-facas-plenus-06-pecas--suporte-madeira-tramontina_690534.webp",
+    image: "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/j/o/jogo-de-facas-plenus-06-pecas--suporte-madeira-tramontina_690534.webp",
     link: "https://www.havan.com.br/jogo-de-facas-plenus-05-pecas-e-suporte-madeira-tramontina-preto-e-madeira/p",
   },
   {
-    id: 13,
-    name: "Jogo de Copos de Vidro Miami Havan Casa 360Ml - 6 Peças",
-    value: "R$ 29,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/j/o/jogo-de-copos-de-vidro-havan-casa-miami-360ml_883754.webp",
-    link: "https://www.havan.com.br/jogo-de-copos-de-vidro-havan-casa-miami-360ml-6-pecas/p",
-  },
-  {
-    id: 14,
-    name: "Toalha Super Banho 100% Algodão Wave Havan Casa 1 Pç - Violeta",
-    value: "R$ 49,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/t/o/toalha-super-banho-wave-yaris_923211.webp",
-    link: "https://www.havan.com.br/toalha-super-banho-wave-yaris-violeta/p",
-  },
-  {
-    id: 15,
+    id: 5,
     name: "Grill e Sanduicheira Philco Inox 2 em 1",
     value: "R$ 149,90",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/g/r/grill-e-sanduicheira-philco-inox-2-em-1-pgr21pi_1236880_1.webp",
+    image: "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/g/r/grill-e-sanduicheira-philco-inox-2-em-1-pgr21pi_1236880_1.webp",
     link: "https://www.havan.com.br/grill-e-sanduicheira-philco-inox-2-em-1-pgr21pi/p",
   },
   {
-    id: 16,
+    id: 6,
     name: "Prato De Bolo Com Pé Cristal Geneva Wolff - Transparente",
     value: "R$ 129,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/p/r/prato-de-bolo-com-pe-cristal-geneva-wolff_1107213.webp",
+    image: "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/p/r/prato-de-bolo-com-pe-cristal-geneva-wolff_1107213.webp",
     link: "https://www.havan.com.br/prato-de-bolo-com-pe-cristal-geneva-wolff-transparente/p",
   },
   {
-    id: 17,
-    name: "Escorredor De Macarrão Mallana 24 Cm - Aço Inox",
-    value: "R$ 29,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/e/s/escorredor-de-macarrao-24cm-havan_1149722.webp",
-    link: "https://www.havan.com.br/escorredor-de-macarrao-mallana-24-cm-ao-inox/p",
-  },
-  {
-    id: 18,
-    name: "Pote Hermético Retangular Havan Casa 1,5 Litros - Vidro",
-    value: "R$ 49,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/p/o/pote-hermetico-retangular-havan-casa-1-5-litros_1140139.webp",
-    link: "https://www.havan.com.br/pote-hermetico-retangular-havan-casa-1-5-litros-vidro/p",
-  },
-  {
-    id: 19,
-    name: "Pote Hermético Retangular Havan Casa 840Ml - Vidro",
-    value: "R$ 39,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/p/o/pote-hermetico-retangular-havan-casa-840ml-302375_1140167.webp",
-    link: "https://www.havan.com.br/pote-hermetico-retangular-havan-casa-840ml-vidro/p",
-  },
-  {
-    id: 20,
-    name: "Pote Hermético Retangular Havan Casa 370Ml - Vidro",
-    value: "R$ 19,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/p/o/pote-hermetico-retangular-havan-casa-370ml_1140180.webp",
-    link: "https://www.havan.com.br/pote-hermetico-retangular-havan-casa-370ml-vidro/p",
-  },
-  {
-    id: 21,
-    name: "Jogo De Peneiras Havan Casa 3 Peças - Inox",
-    value: "R$ 29,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/c/o/conjunto-de-3-peneiras-finecasa_1113420.webp",
-    link: "https://www.havan.com.br/jogo-de-peneiras-havan-casa-3-pecas-inox/p",
-  },
-  {
-    id: 22,
-    name: "Porta Talheres 39X29x4,5Cm Finecasa - Bambu",
-    value: "R$ 99,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/p/o/porta-talheres-39x29x4-5cm-finecasa_321433.webp",
-    link: "https://www.havan.com.br/porta-talheres-39x29x4-5cm-finecasa-bambu/p",
-  },
-  {
-    id: 23,
+    id: 7,
     name: "Panela de Arroz Elétrica Inox Philco PH10P Visor Glass",
     value: "R$ 319,90",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/p/a/panela-de-arroz-ph10p-visor-glass-philco_1235870_1.webp  ",
+    image: "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/p/a/panela-de-arroz-ph10p-visor-glass-philco_1235870_1.webp",
     link: "https://www.havan.com.br/panela-de-arroz-ph10p-visor-glass-philco/p",
   },
   {
-    id: 24,
+    id: 8,
     name: "Abajur De Cerâmica Pottery 32Cm Taschibra - Branco",
     value: "R$ 129,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/a/b/abajur-de-ceramica-pottery-32cm-taschibra_317063.webp  ",
+    image: "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/a/b/abajur-de-ceramica-pottery-32cm-taschibra_317063.webp",
     link: "https://www.havan.com.br/abajur-de-ceramica-pottery-32cm-taschibra-branco/p",
   },
   {
-    id: 25,
+    id: 9,
     name: "Jogo de Assadeiras Retangular Sempre Nadir - 2 Peças",
     value: "R$ 69,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/j/o/jogo-de-assadeiras-retangular-sempre-nadir_1272077.webp",
+    image: "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/j/o/jogo-de-assadeiras-retangular-sempre-nadir_1272077.webp",
     link: "https://www.havan.com.br/jogo-de-assadeiras-retangular-sempre-nadir-2-peas/p",
   },
   {
-    id: 26,
-    name: "Saleiro Com Tampa E Colher Lyor 340Ml - Branco",
-    value: "R$ 49,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/s/a/saleiro-com-tampa-e-colher-lyor-300ml_550833.webp",
-    link: "https://www.havan.com.br/saleiro-com-tampa-e-colher-lyor-300ml-branco/p",
-  },
-  {
-    id: 27,
+    id: 10,
     name: "Jogo de Xícaras para Café com Açucareiro e Suporte Oasis Hauskraft - 4 Peças",
     value: "R$ 99,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/j/o/jogo-de-xicaras-para-cafe-com-acucareiro-e-suporte-oasis-4-pecas_1065160.webp",
+    image: "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/j/o/jogo-de-xicaras-para-cafe-com-acucareiro-e-suporte-oasis-4-pecas_1065160.webp",
     link: "https://www.havan.com.br/jogo-de-xicaras-para-cafe-com-acucareiro-e-suporte-oasis-4-peas/p",
   },
   {
-    id: 28,
-    name: "Liquidificador Oster 1400W Full 3,2 Litros OLIQ610",
+    id: 11,
+    name: "Liquidificador Power Oster Jarra De Vidro 1250W OLIQ520",
     value: "R$ 329,90",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/l/i/liquidificador-1400-full-oliq610-oster-1400w_887603_2.webp",
-    link: "https://www.havan.com.br/liquidificador-1400-full-oliq610-oster-1400w/p  ",
+    image: "https://www.havan.com.br/media/catalog/product/cache/74c1057f7991b4edb2bc7bdaa94de933/l/i/liquidificador-power-oster-jarra-de-vidro-1250w-oliq520_1248819_1.webp",
+    link: "https://www.havan.com.br/liquidificador-power-oster-jarra-de-vidro-1250w-oliq520/p",
   },
   {
-    id: 29,
-    name: "Americano Avulso 38 Cm Luna Havan Casa - Off White",
-    value: "R$ 12,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/a/m/americano-avulso-luna-havan_1191496.webp",
-    link: "https://www.havan.com.br/americano-avulso-luna-havan-off-white/p",
+    id: 12,
+    name: "Forno Elétrico de Bancada Fischer Gourmet Grill 44 litros Preto",
+    value: "R$ 844,99",
+    image: "https://http2.mlstatic.com/D_NQ_NP_2X_825094-MLA99522260088_122025-F.webp",
+    link: "https://www.mercadolivre.com.br/p/MLB15762560?attributes=COLOR:MLB14486838,VOLTAGE:MLB15762560&matt_tool=38524122&pdp_filters=item_id:MLB5500977002&ua=6Fkc1f2ElNLWIGDirQkBUPrdkcHbiHdAQJbMfp8QT04H6Kc#origin=share&sid=share&wid=MLB5500977002&action=copy",
   },
   {
-    id: 30,
-    name: "Organizador com Cesto Ou Clear Fresh 5 Litros - Transparente e Branco",
-    value: "R$ 69,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/o/r/organizador-com-cesto-ou-clear-fresh-5-litros_1246601.webp",
-    link: "https://www.havan.com.br/organizador-com-cesto-ou-clear-fresh-5-litros-transparente-e-branco/p",
-  },
-  {
-    id: 31,
-    name: "Jogo De Porta Condimentos Com Suporte Havan Casa - 6 Peças",
-    value: "R$ 89,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/j/o/jogo-de-porta-condimentos-com-suporte-havan-casa_1122504.webp",
-    link: "https://www.havan.com.br/jogo-de-porta-condimentos-com-suporte-havan-casa-6-peas/p",
-  },
-  {
-    id: 32,
-    name: "Forno Elétrico Full Glass 50 Litros Philco",
-    value: "R$ 799,90",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/f/o/forno-eletrico-full-glass-50-litros-philco-pfe50pe_874677_1.webp",
-    link: "https://www.havan.com.br/forno-eletrico-full-glass-50-litros-philco-pfe50pe/p",
-  },
-  {
-    id: 33,
+    id: 13,
     name: "Mixer Britânia 3 em 1 Mixer Triturador e Batedor",
     value: "R$ 249,90",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/m/i/mixer-britania-3-em-1-mixer-triturador-e-batedor-bmx400p_1033311.webp",
+    image: "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/m/i/mixer-britania-3-em-1-mixer-triturador-e-batedor-bmx400p_1033311.webp",
     link: "https://www.havan.com.br/mixer-britania-3-em-1-mixer-triturador-e-batedor-bmx400p/p",
   },
   {
-    id: 34,
+    id: 14,
     name: "Saladeira Ryo Maresia Oxford 1,6 Litros - Porcelana",
     value: "R$ 69,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/_/5/_531917.webp",
+    image: "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/_/5/_531917.webp",
     link: "https://www.havan.com.br/saladeira-oxford-ryo-maresia-1-6-litros-porcelana/p",
   },
   {
-    id: 35,
-    name: "Prato Raso Opaline Divine Hauskraft - 26,5CM",
-    value: "R$ 19,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/p/r/prato-raso-divine-265cm-hauskraft_1157797.webp ",
-    link: "https://www.havan.com.br/prato-raso-opaline-divine-hauskraft-265cm/p",
-  },
-  {
-    id: 36,
-    name: "Chaleira Elétrica Electrolux 1,8L Efficient ",
+    id: 15,
+    name: "Chaleira Elétrica Electrolux 1,8L Efficient",
     value: "R$ 229,90",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/c/h/chaleira-eletrica-electrolux-1-8l-efficient-eek10_1151376_1.webp ",
+    image: "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/c/h/chaleira-eletrica-electrolux-1-8l-efficient-eek10_1151376_1.webp",
     link: "https://www.havan.com.br/chaleira-eletrica-electrolux-1-8l-efficient-eek10/p",
   },
   {
-    id: 37,
-    name: "Torradeira Elétrica Electrolux Efficient ",
+    id: 16,
+    name: "Torradeira Elétrica Electrolux Efficient",
     value: "R$ 229,90",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/t/o/torradeira-eletrica-electrolux-efficientm-ets10_1050940_2.webp",
+    image: "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/t/o/torradeira-eletrica-electrolux-efficientm-ets10_1050940_2.webp",
     link: "https://www.havan.com.br/torradeira-eletrica-electrolux-efficientm-ets10/p",
   },
   {
-    id: 38,
-    name: "Jogo de Fondue Preto Havan Casa - 11 Peças",
-    value: "R$ 149,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/j/o/jogo-de-fondue-preto-havan-casa_1184750.webp",
-    link: "https://www.havan.com.br/jogo-de-fondue-preto-havan-casa-11-peas/p",
-  },
-  {
-    id: 39,
-    name: "Organizador com Cesto Clear Fresh Martiplast 2,2L - Transparente",
-    value: "R$ 49,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/o/r/organizador-com-cesto-clear-fresh-martiplast-2-2l_1246645.webp",
-    link: "https://www.havan.com.br/organizador-com-cesto-clear-fresh-martiplast-2-2l-transparente/p",
-  },
-  {
-    id: 40,
-    name: "Organizador com Cesto Clear Fresh Martiplast 2,2L - Transparente",
-    value: "R$ 49,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/o/r/organizador-com-cesto-clear-fresh-martiplast-2-2l_1246645.webp",
-    link: "https://www.havan.com.br/organizador-com-cesto-clear-fresh-martiplast-2-2l-transparente/p",
-  },
-  {
-    id: 41,
+    id: 17,
     name: "Batedeira Perola 550 Double Bowl Preta 500W Britânia",
-    value: "R$ 199,90 ",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/b/a/batedeira-perola-550-double-bowl-preta-500w-britania_737638_2.webp",
+    value: "R$ trocar",
+    image: "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/b/a/batedeira-perola-550-double-bowl-preta-500w-britania_737638_2.webp",
     link: "https://www.havan.com.br/batedeira-perola-550-double-bowl-preta-500w-britania/p",
   },
   {
-    id: 42,
-    name: "Tábua De Churrasco Teca C/ Bandeja E Potes Inox Stolf - Madeira",
-    value: "R$ 149,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/t/a/tabua-de-churrasco-teca-c--bandeja-e-potes-inox-stolf_749801.webp",
-    link: "https://www.havan.com.br/tabua-de-churrasco-teca-c-bandeja-e-potes-inox-stolf-madeira/p",
-  },
-  {
-    id: 43,
-    name: "Faqueiro Laguna Tramontina 16 Peças - Inox",
-    value: "R$ 99,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/f/a/faqueiro-laguna-tramontina-16-pecas_947681.webp",
-    link: "https://www.havan.com.br/faqueiro-laguna-tramontina-16-pecas-inox/p",
-  },
-  {
-    id: 44,
-    name: "Jogo De Xicaras De Café Com Pires L Hermitage 80Ml 8 Peças - Transparente",
-    value: "R$ 59,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/j/o/jogo-de-xicaras-de-cafe-com-pires-l-hermitage-8-pecas_768334.webp",
-    link: "https://www.havan.com.br/jogo-de-xicaras-de-cafe-com-pires-l-hermitage-8-pecas-transparente/p",
-  },
-  {
-    id: 45,
+    id: 18,
     name: "Pipoqueira Loreto Tramontina 3,5 Litros - Grafite",
     value: "R$ 139,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/p/i/pipoqueira-loreto-tramontina-3-5-litros_1128349.webp",
+    image: "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/p/i/pipoqueira-loreto-tramontina-3-5-litros_1128349.webp",
     link: "https://www.havan.com.br/pipoqueira-loreto-tramontina-3-5-litros-grafite/p",
   },
   {
-    id: 46,
+    id: 19,
     name: "Jarra De Vidro Com Tampa De Bambu Classic Lyor 1 Litro - Transparente",
     value: "R$ 59,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/j/a/jarra-de-vidro-com-tampa-de-bambu-classic-lyor-1-litro_930528.webp",
+    image: "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/j/a/jarra-de-vidro-com-tampa-de-bambu-classic-lyor-1-litro_930528.webp",
     link: "https://www.havan.com.br/jarra-de-vidro-com-tampa-de-bambu-classic-lyor-1-litro-transparente/p",
   },
   {
-    id: 47,
+    id: 20,
     name: "Aparelho De Jantar E Chá Unni Brisa Oxford 20 Peças - Cerâmica",
-    value: "R$ 349,90",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/a/p/aparelho-de-jantar-e-cha-unni-brisa-oxford-20-pcs_1194991.webp",
+    value: "R$ trocar",
+    image: "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/a/p/aparelho-de-jantar-e-cha-unni-brisa-oxford-20-pcs_1194991.webp",
     link: "https://www.havan.com.br/aparelho-de-jantar-e-cha-unni-brisa-oxford-20-pcs-cermica/p",
   },
   {
-    id: 48,
+    id: 21,
     name: "Panela de Pressão Super Brinox 4,2 Litros - Mocha Mousse",
     value: "R$ 249,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/p/a/panela-de-pressao-mocha-mouse-linha-super-cind-42_1163802.webp",
+    image: "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/p/a/panela-de-pressao-mocha-mouse-linha-super-cind-42_1163802.webp",
     link: "https://www.havan.com.br/panela-de-pressao-super-brinox-4-2-litros-mocha-mousse/p",
   },
   {
-    id: 49,
+    id: 22,
     name: "Jogo De Taças Sobremesa 230 Ml Havan Casa 6 Peças - Munique",
     value: "R$ 39,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/j/o/jogo-de-tacas-sobremesa-230ml-havan-casa-6-pecas_1061901.webp",
+    image: "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/j/o/jogo-de-tacas-sobremesa-230ml-havan-casa-6-pecas_1061901.webp",
     link: "https://www.havan.com.br/jogo-de-tacas-sobremesa-230ml-havan-casa-6-pecas-munique/p",
   },
   {
-    id: 50,
+    id: 23,
     name: "Cesto De Roupas Bambu Com Tampa 65 Litros Conthey - Amêndoa",
     value: "R$ 139,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/c/e/cesto-de-roupas-bambu-com-tampa-65-litros-conthey_940903.webp",
+    image: "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/c/e/cesto-de-roupas-bambu-com-tampa-65-litros-conthey_940903.webp",
     link: "https://www.havan.com.br/cesto-de-roupas-bambu-com-tampa-65-litros-conthey-amndoa/p",
   },
   {
-    id: 51,
+    id: 24,
     name: "Jogo de Jarra com Taças Ice L hermitage 7 Peças - Vidro",
     value: "R$ 129,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/j/o/jogo-de-jarra-com-tacas-ice-lhermitage-7-pecas_1008312.webp",
+    image: "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/j/o/jogo-de-jarra-com-tacas-ice-lhermitage-7-pecas_1008312.webp",
     link: "https://www.havan.com.br/jogo-de-jarra-com-tacas-ice-lhermitage-7-pecas-vidro/p",
   },
   {
-    id: 52,
-    name: "Porta Algodão E Cotonete Com Tampa My Box Lyor - Bambu",
-    value: "R$ 39,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/p/o/porta-algodao-e-cotonete-com-tampa-de-bambu-my-box_1164015.webp",
-    link: "https://www.havan.com.br/porta-algodao-e-cotonete-com-tampa-my-box-lyor-bambu/p",
-  },
-  {
-    id: 53,
+    id: 25,
     name: "Jogo Taça Premium Transparente Havan Casa 365Ml - 6 Peças",
     value: "R$ 59,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/j/o/jogo-de-tacas-premium-transparente-havan-casa-365ml_1184818.webp",
+    image: "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/j/o/jogo-de-tacas-premium-transparente-havan-casa-365ml_1184818.webp",
     link: "https://www.havan.com.br/jogo-de-tacas-premium-transparente-havan-casa-365ml-6-peas/p",
   },
   {
-    id: 54,
+    id: 26,
     name: "Travesseiro Nasa com Suporte Anatômico 46Cm X 66Cm Marcbrayn - Bege",
     value: "R$ 99,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/t/r/travesseiro-62x42cm-visco-basic-marcbrayn_1250132.webp",
+    image: "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/t/r/travesseiro-62x42cm-visco-basic-marcbrayn_1250132.webp",
     link: "https://www.havan.com.br/travesseiro-62x42cm-visco-basic-marcbrayn-bege/p",
   },
   {
-    id: 55,
+    id: 27,
     name: "Travesseiro Nasa com Suporte Anatômico 46Cm X 66Cm Marcbrayn - Bege",
     value: "R$ 99,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/t/r/travesseiro-62x42cm-visco-basic-marcbrayn_1250132.webp",
+    image: "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/t/r/travesseiro-62x42cm-visco-basic-marcbrayn_1250132.webp",
     link: "https://www.havan.com.br/travesseiro-62x42cm-visco-basic-marcbrayn-bege/p",
   },
   {
-    id: 56,
-    name: "Varal De Chão Com Abas Maxi Mor - Branco",
-    value: "R$ 179,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/v/a/varal-de-chao-com-abas-maxi-mor_1164097.webp",
-    link: "https://www.havan.com.br/varal-de-chao-com-abas-maxi-mor-branco/p",
-  },
-  {
-    id: 57,
+    id: 28,
     name: "Lasanheira De Vidro Com Tampa 5 Litros Marinex - Transparente",
     value: "R$ 99,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/l/a/lasanheira-de-vidro-com-tampa-5-litros-marinex_1031876.webp",
+    image: "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/l/a/lasanheira-de-vidro-com-tampa-5-litros-marinex_1031876.webp",
     link: "https://www.havan.com.br/lasanheira-de-vidro-com-tampa-5-litros-marinex-transparente/p",
   },
   {
-    id: 58,
-    name: "Jogo de Copos de Vidro Long Drink Dance Pasabahçe 320Ml - 6 Peças",
-    value: "R$ 39,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/j/o/jogo-de-copos-de-vidro-long-drink-dance-pasabahce-320ml_1191315.webp",
-    link: "https://www.havan.com.br/jogo-de-copos-de-vidro-long-drink-dance-pasabahce-320ml-6-peas/p",
-  },
-  {
-    id: 59,
-    name: "Porta Bolo De Bambu Com Tampa 28Cm - Havan Casa",
-    value: "R$ 69,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/p/o/porta-bolo-de-bambu-com-tampa-28cm_1005989.webp",
-    link: "https://www.havan.com.br/porta-bolo-de-bambu-com-tampa-28cm-havan-casa/p",
-  },
-  {
-    id: 60,
-    name: "Conjunto para Frios 3 peças - Diversos",
-    value: "R$ 59,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/c/o/conjunto-para-frios-3-pecas-brinox_25053_1.webp",
-    link: "https://www.havan.com.br/conjunto-para-frios-3-pecas-diversos/p",
-  },
-  {
-    id: 61,
-    name: "Escorredor De Louça Com Porta Copos Arthi - Aço Cromado",
-    value: "R$ 89,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/e/s/escorredor-berco-em-aco-cromado-com-porta-copos-arthi_795466.webp",
-    link: "https://www.havan.com.br/escorredor-berco-em-aco-cromado-com-porta-copos-arthi-ao-cromado/p",
-  },
-  {
-    id: 62,
-    name: "Mini Processador de Alimentos Britânia 360ml Função Pulsar 2P",
-    value: "R$ 149,90",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/m/i/mini-processador-2p-britania_1239754_2.webp",
-    link: "https://www.havan.com.br/mini-processador-2p-britania/p",
-  },
-  {
-    id: 63,
-    name: "Porta Talheres Querida Black Arthi - Preto",
-    value: "R$ 44,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/p/o/porta-talheres-querida-black-arthi_900998.webp",
-    link: "https://www.havan.com.br/porta-talheres-querida-black-arthi-preto/p",
-  },
-  {
-    id: 64,
-    name: "Porta-Guardanapos Querida Arthi",
-    value: "R$ 24,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/p/o/porta-guardanapos-querida-arthi_1087591.webp",
-    link: "https://www.havan.com.br/porta-guardanapos-querida-arthi-diversos/p",
-  },
-  {
-    id: 65,
-    name: "Suporte para Rolo de Papel Toalha Black Eco Design Arthi - 15cm",
-    value: "R$ 39,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/s/u/suporte-para-rolo-de-papel-toalha-eco-design-black-arthi_967484.webp",
-    link: "https://www.havan.com.br/suporte-para-rolo-de-papel-toalha-eco-design-black-arthi-15cm/p",
-  },
-  {
-    id: 66,
-    name: "Pegador Inox com Ponta de Silicone Weck 30Cm",
-    value: "R$ 29,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/p/e/pegador-inox-com-ponta-de-silicone-cinza-30cm_1249909.webp",
-    link: "https://www.havan.com.br/pegador-inox-com-ponta-de-silicone-cinza-30cm-diversos/p",
-  },
-  {
-    id: 67,
-    name: "Espatula de Silicone 28Cm Creme e Cinza Weck",
-    value: "R$ 29,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/e/s/espatula-silicone-weck-28cm-cremecinza_1249984.webp",
-    link: "https://www.havan.com.br/espatula-silicone-weck-28cm-cremecinza-diversos/p",
-  },
-  {
-    id: 68,
-    name: "Travessa Melamina Marmorizada 32X13cm Weck",
-    value: "R$ 29,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/t/r/travessa-melamina-marmorizada-32x13-weck_1264257.webp",
-    link: "https://www.havan.com.br/travessa-melamina-marmorizada-32x13-weck-diversos/p",
-  },
-  {
-    id: 69,
+    id: 29,
     name: "Jogo de Xícaras com Pires Colibri Wolff 170Ml - 4 Peças",
     value: "R$ 79,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/j/o/jogo-de-xicaras-com-pires-colibri-wolff-190ml_1228984.webp",
+    image: "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/j/o/jogo-de-xicaras-com-pires-colibri-wolff-190ml_1228984.webp",
     link: "https://www.havan.com.br/jogo-de-xicaras-com-pires-colibri-wolff-190ml-4-peas/p",
   },
   {
-    id: 70,
-    name: "Cesta De Pão Retangular Com Alça Havan Casa 25Cm - Natural",
-    value: "R$ 34,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/c/e/cesta-de-pao-retangular-com-alca-havan-casa-25cm_1041343.webp",
-    link: "https://www.havan.com.br/cesta-de-pao-retangular-com-alca-havan-casa-25cm-natural/p",
-  },
-  {
-    id: 71,
+    id: 30,
     name: "Jogo de Banheiro Bambu Havan Casa 6 Peças - Preto",
     value: "R$ 149,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/j/o/jogo-de-banheiro-bambu-6-pecas_1221532.webp",
+    image: "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/j/o/jogo-de-banheiro-bambu-6-pecas_1221532.webp",
     link: "https://www.havan.com.br/jogo-de-banheiro-bambu-havan-casa-6-pecas-preto/p",
   },
   {
-    id: 72,
+    id: 31,
     name: "Lixeira Quadrada com Pedal Havan Casa 12 Litros - Cinza",
     value: "R$ 119,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/l/i/lixeira-plastica-com-pedal-12l-havan-casa_1211250.webp",
+    image: "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/l/i/lixeira-plastica-com-pedal-12l-havan-casa_1211250.webp",
     link: "https://www.havan.com.br/lixeira-plastica-com-pedal-12l-havan-casa-cinza/p",
   },
   {
-    id: 73,
-    name: "Jogo de Potes de Vidro Hauskraft - 5 Peças",
-    value: "R$ 39,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/j/o/jogo-de-potes-de-vidro-borossilicato-hauskraft_1229391.webp",
-    link: "https://www.havan.com.br/jogo-de-potes-de-vidro-borossilicato-hauskraft-5-peas/p",
-  },
-  {
-    id: 74,
-    name: "Pote Hermético Redondo De Vidro Hauskraft 1,2 Litros - LIEGE",
-    value: "R$ 34,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/p/o/pote-hermetico-de-vidro-12l-liege-hauskraft_1200709.webp",
-    link: "https://www.havan.com.br/pote-hermetico-de-vidro-12l-liege-hauskraft-liege/p",
-  },
-  {
-    id: 75,
-    name: "Pote Hermético Redondo De Vidro Hauskraft 900Ml - LIEGE",
-    value: "R$ 29,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/p/o/pote-hermetico-de-vidro-12l-liege-hauskraft_1200709.webp",
-    link: "https://www.havan.com.br/pote-hermetico-de-vidro-12l-liege-hauskraft-liege/p",
-  },
-  {
-    id: 76,
-    name: "Pote Hermético Redondo De Vidro Hauskraft 700Ml - LIEGE",
-    value: "R$ 24,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/p/o/pote-hermetico-de-vidro-12l-liege-hauskraft_1200709.webp",
-    link: "https://www.havan.com.br/pote-hermetico-de-vidro-12l-liege-hauskraft-liege/p",
-  },
-  {
-    id: 77,
-    name: "Descascador De Legumes Chef Pro Wolff 18Cm",
-    value: "R$ 29,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/d/e/descascador-de-legumes-liga-de-zingo-wolff_1197436.webp",
-    link: "https://www.havan.com.br/descascador-de-legumes-liga-de-zingo-wolff-diversos/p ",
-  },
-  {
-    id: 78,
-    name: "Pote Hermético Retangular Duo Lock 2,3 Litros Ou - Transparente",
-    value: "R$ 49,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/p/o/pote-hermetico-retangular-duo-lock-2-3-litros-ou_1194602.webp",
-    link: "https://www.havan.com.br/pote-hermetico-retangular-duo-lock-2-3-litros-ou-transparente/p ",
-  },
-  {
-    id: 79,
-    name: "Chaleira Com Bico Coador De Vidro Stanford 1 Litro - Hauskraft",
-    value: "R$ 49,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/c/h/chaleira-com-bico-coador-de-vidro-stanford-1-litro_1194129.webp",
-    link: "https://www.havan.com.br/chaleira-com-bico-coador-de-vidro-stanford-1-litro-hauskraft/p",
-  },
-  {
-    id: 80,
+    id: 32,
     name: "Passadeira A Vapor Klicke",
     value: "R$ 199,90",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/p/a/passadeira-a-vapor-klicke_1223869_1.webp",
-    link: "https://www.havan.com.br/passadeira-a-vapor-klicke/p ",
+    image: "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/p/a/passadeira-a-vapor-klicke_1223869_1.webp",
+    link: "https://www.havan.com.br/passadeira-a-vapor-klicke/p",
   },
   {
-    id: 81,
-    name: "Jogo De Pratos Para Sobremesa Safira Havan Casa - 7 Peças",
-    value: "R$ 69,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/j/o/jogo-de-pratos-para-sobremesa-safira-havan-casa_1193339.webp",
-    link: "https://www.havan.com.br/jogo-de-pratos-para-sobremesa-safira-havan-casa-7-peas/p",
-  },
-  {
-    id: 82,
-    name: "Jarra Com Tampa Royal Havan Casa 1,8 Litros - Vidro",
-    value: "R$ 39,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/j/a/jarra-com-tampa-royal-havan-casa-1-8-litros_1192764.webp",
-    link: "https://www.havan.com.br/jarra-com-tampa-royal-havan-casa-1-8-litros-vidro/p",
-  },
-  {
-    id: 83,
+    id: 33,
     name: "Garrafa Térmica Com Trava Havan Casa 1,9 Litros - Aço Inox",
-    value: "R$ 169,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/g/a/garrafa-termica-com-trava-havan-casa-1-9-litros_1184372.webp",
+    value: "R$ trocar",
+    image: "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/g/a/garrafa-termica-com-trava-havan-casa-1-9-litros_1184372.webp",
     link: "https://www.havan.com.br/garrafa-termica-com-trava-havan-casa-1-9-litros-ao-inox/p",
   },
   {
-    id: 84,
-    name: "Forma Pudim Lisa Havan Casa 23Cm - Cinza",
-    value: "R$ 39,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/f/o/forma-pudim-lisa-havan-casa-23cm_1184308.webp",
-    link: "https://www.havan.com.br/forma-pudim-lisa-havan-casa-23cm-cinza/p",
-  },
-  {
-    id: 85,
+    id: 34,
     name: "Jogo De Jantar Opaline Marselha Havan Casa - 12 Peças",
     value: "R$ 199,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/j/o/jogo-de-jantar-opaline-marselha-havan-casa_1183504.webp",
+    image: "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/j/o/jogo-de-jantar-opaline-marselha-havan-casa_1183504.webp",
     link: "https://www.havan.com.br/jogo-de-jantar-opaline-marselha-havan-casa-12-peas/p",
   },
   {
-    id: 86,
-    name: "Organizador Giratório Alto Com Divisória 25,5Cm Lume Ou - BEGE FECHADO",
-    value: "R$ 69,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/o/r/organizador-giratorio-alto-com-divisoria-lume_1190171.webp ",
-    link: "https://www.havan.com.br/organizador-giratorio-alto-com-divisoria-lume-bege-fechado/p",
-  },
-  {
-    id: 87,
-    name: "Meleira Soho em Cristal L Hermitage 360Ml - Transparente",
-    value: "R$ 29,99",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/m/e/meleira-soho-em-cristal-l-hermitage-360ml_1173330.webp",
-    link: "https://www.havan.com.br/meleira-soho-em-cristal-l-hermitage-360ml-transparente/p",
-  },
-  {
-    id: 89,
+    id: 35,
     name: "Lavadora de Alta Pressão Wap 2000W WL4000",
     value: "R$ 1.099,90",
-    image:
-      "https://www.havan.com.br/media/catalog/product/cache/74c1057f7991b4edb2bc7bdaa94de933/l/a/lavadora-de-alta-pressao-wap-2000w-wl4000_900362_1.webp",
+    image: "https://www.havan.com.br/media/catalog/product/cache/74c1057f7991b4edb2bc7bdaa94de933/l/a/lavadora-de-alta-pressao-wap-2000w-wl4000_900362_1.webp",
     link: "https://www.havan.com.br/lavadora-de-alta-pressao-wap-2000w-wl4000/p",
   },
   {
-    id: 90,
+    id: 36,
     name: "Samsung Vision AI TV 48 Polegadas OLED 4K S85H + Soundbar Samsung B450F",
     value: "R$ 5.509,05",
-    image:
-      "https://samsungbrshop.vtexassets.com/arquivos/ids/298299-600-auto?v=639239674745600000",
-    link: "https://shop.samsung.com/br/samsung-vision-ai-tv-48-oled-4k-s85h-mais-soundbar-samsung-b450f/p?idsku=16047&cid=br_pd_pmax_google_tv_always-on_23892438845-pmax-teste-tv-ce-aon-seda-gads-monks_multi_idF-QN48S85B450F-6717397569_conversion&keeplink=true&gad_source=1&gad_campaignid=23892445880&gbraid=0AAAAADJayZ3Qqv16_19zpjoBbltL7b0k1&gclid=Cj0KCQjw8c3VBhCsARIsAA_xJ92Gr-_z5aHriDzidSsTeg8RacISOn7M818vISHD6ABpq6w-hxyZbS8aAilREALw_wcB",
+    image: "https://samsungbrshop.vtexassets.com/arquivos/ids/298299-600-auto?v=639239674745600000",
+    link: "https://shop.samsung.com/br/samsung-vision-ai-tv-48-oled-4k-s85h-mais-soundbar-samsung-b450f/p?idsku=16047",
   },
   {
-    id: 91,
+    id: 37,
     name: "Máquina de Lavar Brastemp",
     value: "R$ 2.697,05",
-    image:
-      "https://brastemp.vtexassets.com/arquivos/ids/293054-828-auto/01_Brastemp_Lavadora_BWK14BB_Imagem_Frontal.webp?v=639220497857030000&quality=80",
-    link: "https://www.brastemp.com.br/maquina-de-lavar-brastemp-14kg-branca-com-ciclo-tira-manchas-advanced-e-smart-sensor-bwk14bb/p?_gl=1*ltvoj2*_up*MQ..*_gs*MQ..&gclid=Cj0KCQjwh4TVBhCWARIsAG0czmokD2nyoUuX3-RsfJqZdZ13lfRWnTOC6eyK3IW5Kd3gkGv1RW6ry3saAnu_EALw_wcB&gbraid=0AAAAADJ0Bqpdw506QOR4FEzjiCML6YGmm",
+    image: "https://brastemp.vtexassets.com/arquivos/ids/293054-828-auto/01_Brastemp_Lavadora_BWK14BB_Imagem_Frontal.webp?v=639220497857030000&quality=80",
+    link: "https://www.brastemp.com.br/maquina-de-lavar-brastemp-14kg-branca-com-ciclo-tira-manchas-advanced-e-smart-sensor-bwk14bb/p",
   },
   {
-    id: 92,
+    id: 38,
     name: "Cooktop 4 Bocas Dako Supreme Com Mesa de Vidro e Tripla Chama Preto Bivol",
     value: "R$ 488,05",
-    image:
-      "https://http2.mlstatic.com/D_NQ_NP_2X_912486-MLA100063714741_122025-F.webp",
-    link: "http://mercadolivre.com.br/cooktop-4-bocas-dako-supreme-com-mesa-de-vidro-e-tripla-chama-preto-bivolt/p/MLB23455094#polycard_client=search-desktop&be_origin=backend&overlay_label=not_apply&search_layout=grid&position=17&type=product&tracking_id=87da1fc4-5837-41ec-9ddf-174f1e26d77b&wid=MLB6755799384&sid=search",
+    image: "https://http2.mlstatic.com/D_NQ_NP_2X_912486-MLA100063714741_122025-F.webp",
+    link: "https://www.mercadolivre.com.br/cooktop-4-bocas-dako-supreme-com-mesa-de-vidro-e-tripla-chama-preto-bivolt/p/MLB23455094",
   },
   {
-    id: 93,
+    id: 39,
     name: "Chuveiro Acqua Duo Preto Fosco Black Matte 5500w Lorenzetti",
     value: "R$ 654,41",
-    image:
-      "https://http2.mlstatic.com/D_NQ_NP_2X_843200-MLU77341664949_062024-F.webp",
-    link: "https://www.mercadolivre.com.br/chuveiro-acqua-duo-preto-fosco-black-matte-5500w-lorenzetti/p/MLB25170948?product_trigger_id=MLB73781562&attributes=POWER%3A7.8+kW%2CCOLOR%3APrateado%2CVOLTAGE%3AMLB25170948&pdp_filters=item_id%3AMLB6207170536&applied_product_filters=MLB26884984&picker=true&quantity=1",
+    image: "https://http2.mlstatic.com/D_NQ_NP_2X_843200-MLU77341664949_062024-F.webp",
+    link: "https://www.mercadolivre.com.br/chuveiro-acqua-duo-preto-fosco-black-matte-5500w-lorenzetti/p/MLB25170948",
   },
   {
-    id: 94,
+    id: 40,
     name: "Panificadora Multipane 12 Programações Com Função Timer e Antiaderente Potência de 550 W Cor Preto Britânia",
     value: "R$ 888",
-    image:
-      "https://http2.mlstatic.com/D_NQ_NP_2X_873422-MLA40301247641_012020-F.webp",
-    link: "https://www.mercadolivre.com.br/panificadora-multipane-12-programacoes-com-funcao-timer-e-antiaderente-potencia-de-550-w-cor-preto-britania/p/MLB14489716?product_trigger_id=MLB15278925&attributes=COLOR%3APreto%2CVOLTAGE%3AMLB14489716&pdp_filters=item_id%3AMLB1942049735&applied_product_filters=MLB15278925&picker=true&quantity=1",
+    image: "https://http2.mlstatic.com/D_NQ_NP_2X_873422-MLA40301247641_012020-F.webp",
+    link: "https://www.mercadolivre.com.br/panificadora-multipane-12-programacoes-com-funcao-timer-e-antiaderente-potencia-de-550-w-cor-preto-britania/p/MLB14489716",
   },
   {
-    id: 95,
+    id: 41,
     name: "Geladeira Inteligente com Flex Freeze B= Smart Brastemp Frost Free Inverse Inox",
     value: "R$ 4.899,99",
-    image:
-      "https://brastemp.vtexassets.com/arquivos/ids/288175-828-auto/Brastemp_Geladeira_BRE68AK_Imagem_Frontal.webp?v=639160190448000000&quality=80",
+    image: "https://brastemp.vtexassets.com/arquivos/ids/288175-828-auto/Brastemp_Geladeira_BRE68AK_Imagem_Frontal.webp?v=639160190448000000&quality=80",
     link: "https://www.brastemp.com.br/geladeira-inteligente-b--smart-brastemp-frost-free-inverse-477-litros-inox---bre68ak-326199093/p",
   },
   {
-    id: 96,
+    id: 42,
     name: "Lava-Louças Electrolux 10 Serviços LL10X com Função Higienizar Inox",
     value: "R$ 3.361,46",
-    image:
-      "https://http2.mlstatic.com/D_NQ_NP_2X_646778-MLA92016050767_092025-F.webp",
-    link: "https://www.mercadolivre.com.br/lava-loucas-electrolux-10-servicos-ll10x-com-funcao-higienizar-inox/p/MLB36263784?product_trigger_id=MLB36263784&attributes=COLOR%3ACinza%2CVOLTAGE%3AMLB36263784&picker=true&quantity=1",
+    image: "https://http2.mlstatic.com/D_NQ_NP_2X_646778-MLA92016050767_092025-F.webp",
+    link: "https://www.mercadolivre.com.br/lava-loucas-electrolux-10-servicos-ll10x-com-funcao-higienizar-inox/p/MLB36263784",
+  },
+  {
+    id: 43,
+    name: "Fritadeira Airfryer Duplo Cesto Preto Philips Walita Preto",
+    value: "R$ 854",
+    image: "https://http2.mlstatic.com/D_NQ_NP_2X_920323-MLA99867509313_112025-F.webp",
+    link: "https://www.mercadolivre.com.br/p/MLB49537772?attributes=COLOR:MLB50912399,VOLTAGE:MLB49537772&matt_tool=38524122&pdp_filters=item_id:MLB5922903940&ua=gxnPnmKECwr_ydOn4Zfwh9k3GyrPlywqaUVCjUpHBlkOReY#origin=share&sid=share&wid=MLB5922903940&action=copy",
+  },
+  {
+    id: 44,
+    name: "Sofá Retrátil Reclinável 2,10m",
+    value: "Verificar em loja local",
+    image: "https://http2.mlstatic.com/D_NQ_NP_2X_856611-MLU72700629685_112023-F.webp",
+    link: "",
+  },
+  {
+    id: 45,
+    name: "Ar Condicionado Split LG Dual Inverter AI Voice 9000 BTU Frio",
+    value: "R$ 1.799,00",
+    image: "https://http2.mlstatic.com/D_NQ_NP_2X_731149-MLA114601143193_072026-F.webp",
+    link: "https://www.mercadolivre.com.br/ar-condicionado-split-lg-dual-inverter-ai-voice-9000-btu-frio/p/MLB66277100?pdp_filters=item_id:MLB6879863154#is_advertising=true&searchVariation=MLB66277100&backend_model=search-backend&be_origin=backend&position=1&search_layout=grid&type=pad&tracking_id=22e92bef-015c-4ca6-9b0b-ac25e045e63d&ad_domain=VQCATCORE_LST&ad_position=1&ad_click_id=ZDEwNGI0MWUtZWJjMi00NDZlLWFkOTUtYmZiNDI1MDlhMTUw",
+  },
+  {
+    id: 46,
+    name: "Ar Condicionado Inverter LG Dual Voice AI 12.000 Btus Frio R-32",
+    value: "R$ 2.059",
+    image: "https://http2.mlstatic.com/D_NQ_NP_2X_731149-MLA114601143193_072026-F.webp",
+    link: "https://www.mercadolivre.com.br/ar-condicionado-inverter-lg-dual-voice-ai-12000-btus-frio-r-32/p/MLB65887529#polycard_client=search-desktop&be_origin=backend&overlay_label=not_apply&search_layout=grid&position=7&type=product&tracking_id=22e92bef-015c-4ca6-9b0b-ac25e045e63d&wid=MLB5245309349&sid=search",
+  },
+  {
+    id: 47,
+    name: "Mesa de Jantar",
+    value: "Verificar em loja local",
+    image: "/mesa.png",
+    link: "",
   },
 ];
 
@@ -988,9 +558,6 @@ export default function WeddingSite() {
   const [giftPricesUpdatedAt, setGiftPricesUpdatedAt] = useState<string | null>(null);
   const [giftPricesStatus, setGiftPricesStatus] = useState<string | null>(null);
 
-  // Atualiza os preços automaticamente enquanto o site estiver aberto.
-  // A cada 6 horas fazemos uma consulta forçada, sem usar o cache da API.
-  const GIFT_PRICE_REFRESH_INTERVAL_MS = 6 * 60 * 60 * 1000;
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [rsvpConfirmation, setRsvpConfirmation] =
     useState<RsvpConfirmation>(null);
@@ -1072,7 +639,7 @@ export default function WeddingSite() {
     async (options?: { force?: boolean; signalCancelled?: () => boolean }) => {
       const products = gifts
         .filter((gift) => gift.name !== PIX_GIFT_NAME && gift.link)
-        .map((gift) => ({ id: gift.id, url: gift.link as string }));
+        .map((gift) => ({ id: gift.id, url: gift.link!.trim() }));
 
       if (!products.length) return { ok: false as const };
 
@@ -1107,8 +674,8 @@ export default function WeddingSite() {
 
           setGiftPricesStatus(
             failed > 0
-              ? `${updated} preços atualizados • ${failed} não puderam ser consultados`
-              : `${updated} de ${total} preços atualizados com sucesso`,
+              ? `${updated} preços consultados • ${failed} falharam; demais valores conforme cadastro`
+              : `${updated} de ${total} preços consultados`,
           );
 
           if (failed > 0) {
@@ -1119,6 +686,9 @@ export default function WeddingSite() {
         return { ok: true as const, forced: Boolean(data?.forced), failed: data.failed ?? [] };
       } catch (error) {
         console.error("Erro ao atualizar preços dos presentes:", error);
+        if (!options?.signalCancelled?.()) {
+          setGiftPricesStatus("Não foi possível consultar os anúncios. Valores cadastrados exibidos.");
+        }
         return { ok: false as const };
       } finally {
         if (!options?.signalCancelled?.()) setGiftPricesLoading(false);
@@ -1235,10 +805,20 @@ export default function WeddingSite() {
     });
 
     return [...result].sort((a, b) => {
-      if (giftSort === "menor-preco")
-        return parseGiftPrice(a.value) - parseGiftPrice(b.value);
-      if (giftSort === "maior-preco")
-        return parseGiftPrice(b.value) - parseGiftPrice(a.value);
+      if (giftSort === "menor-preco") {
+        const aPrice = parseGiftPrice(a.value);
+        const bPrice = parseGiftPrice(b.value);
+        if (!Number.isFinite(aPrice)) return Number.isFinite(bPrice) ? 1 : 0;
+        if (!Number.isFinite(bPrice)) return -1;
+        return aPrice - bPrice;
+      }
+      if (giftSort === "maior-preco") {
+        const aPrice = parseGiftPrice(a.value);
+        const bPrice = parseGiftPrice(b.value);
+        if (!Number.isFinite(aPrice)) return Number.isFinite(bPrice) ? 1 : 0;
+        if (!Number.isFinite(bPrice)) return -1;
+        return bPrice - aPrice;
+      }
       if (giftSort === "az") return a.name.localeCompare(b.name, "pt-BR");
       return a.id - b.id;
     });
@@ -1273,10 +853,7 @@ export default function WeddingSite() {
     setVisibleGiftCount(16);
   }, [giftCategory, giftFilter, giftSearch, giftSort]);
 
-  const visibleGifts = useMemo(
-    () => filteredGifts.slice(0, visibleGiftCount),
-    [filteredGifts, visibleGiftCount],
-  );
+  const visibleGifts = filteredGifts.slice(0, visibleGiftCount);
 
   const hasMoreGifts = visibleGiftCount < filteredGifts.length;
 
@@ -2010,15 +1587,11 @@ export default function WeddingSite() {
           }}
         />
 
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(9,6,3,0.22)_0%,rgba(10,7,4,0.42)_34%,rgba(4,3,2,0.82)_100%),linear-gradient(180deg,rgba(6,4,2,0.56)_0%,rgba(18,11,5,0.18)_42%,rgba(4,2,1,0.80)_100%)]" />
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.50),transparent_22%,transparent_78%,rgba(0,0,0,0.50))]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(250,214,143,0.30)_0%,rgba(231,190,112,0.13)_28%,rgba(0,0,0,0.08)_48%,rgba(0,0,0,0.58)_100%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,218,146,0.28)_0%,rgba(221,169,78,0.10)_35%,transparent_68%)] mix-blend-screen" />
-        <div className="absolute inset-0 bg-[linear-gradient(115deg,rgba(226,183,105,0.15)_0%,transparent_30%,rgba(255,255,255,0.07)_52%,transparent_74%)] animate-[goldLight_12s_ease-in-out_infinite] mobile-no-heavy-animation" />
-        <div className="absolute -top-32 left-1/2 h-72 w-[760px] -translate-x-1/2 rounded-full bg-[#f5d59a]/16 blur-3xl animate-[cinemaGlow_7.5s_ease-in-out_infinite] mobile-no-heavy-animation" />
-        <div className="absolute -bottom-24 left-1/2 h-80 w-[720px] -translate-x-1/2 rounded-full bg-black/38 blur-3xl" />
-        <div className="absolute inset-x-0 top-0 h-52 bg-gradient-to-b from-black/44 to-transparent" />
-        <div className="absolute inset-x-0 bottom-0 h-[62%] bg-gradient-to-t from-black/68 via-black/22 to-transparent" />
+        {/* Escurecimento suave da imagem de fundo */}
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.55)_0%,rgba(0,0,0,0.35)_50%,rgba(0,0,0,0.50)_100%)]" />
+
+        {/* Iluminação dourada suave no centro */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,218,146,0.12)_0%,transparent_68%)] mix-blend-screen" />
 
         <div className="relative max-w-[960px] w-full text-center text-white drop-shadow-[0_10px_34px_rgba(0,0,0,0.56)] px-1 sm:px-0">
           <p className="uppercase tracking-[0.16em] sm:tracking-[0.34em] md:tracking-[0.48em] text-[9px] sm:text-xs md:text-sm mb-4 sm:mb-5 md:mb-8 leading-5 animate-[organicReveal_1.05s_cubic-bezier(.2,.8,.2,1)_0.1s_both]">
@@ -2279,7 +1852,7 @@ export default function WeddingSite() {
                   <span>
                     {giftPricesLoading
                       ? "Atualizando preços dos anúncios..."
-                      : giftPricesStatus ?? "Preços sincronizados com os anúncios"}
+                      : giftPricesStatus ?? "Preços exibidos conforme cadastro; consultando anúncios"}
                   </span>
                 </div>
                 <span className="text-xs text-[#9a8064]">
@@ -2814,11 +2387,9 @@ function LoadingScreen() {
 }
 
 function LightParticles() {
-  const particles = Array.from({ length: 18 });
-
   return (
     <div className="pointer-events-none fixed inset-0 z-30 overflow-hidden hidden sm:block">
-      {particles.map((_, index) => (
+      {LIGHT_PARTICLE_INDICES.map((index) => (
         <span
           key={index}
           className="absolute rounded-full bg-white/70 animate-[lightFloat_9s_ease-in-out_infinite]"
@@ -2846,17 +2417,6 @@ function LightParticles() {
           50% {
             transform: translate3d(12px, -18px, 0) scale(1.8);
             opacity: 0.34;
-          }
-        }
-
-        @keyframes modalEntrance {
-          from {
-            opacity: 0;
-            transform: translateY(18px) scale(0.96);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0) scale(1);
           }
         }
       `}</style>
