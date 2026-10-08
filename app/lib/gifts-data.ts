@@ -127,10 +127,10 @@ export const gifts: Gift[] = [
   },
   {
     id: 17,
-    name: "Batedeira Perola 550 Double Bowl Preta 500W Britânia",
-    value: "R$ trocar",
-    image: "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/b/a/batedeira-perola-550-double-bowl-preta-500w-britania_737638_2.webp",
-    link: "https://www.havan.com.br/batedeira-perola-550-double-bowl-preta-500w-britania/p",
+    name: "Batedeira Planetária Oster Bowl Inox 12 velocidades 3 batedores",
+    value: "R$ 699,90",
+    image: "https://www.havan.com.br/media/catalog/product/cache/74c1057f7991b4edb2bc7bdaa94de933/b/a/batedeira-planetaria-oster-bowl-inox-12-velocidades-3-batedores-obat641_968676_2.webp",
+    link: "https://www.havan.com.br/batedeira-planetaria-oster-bowl-inox-12-velocidades-3-batedores-obat641/p",
   },
   {
     id: 18,
@@ -357,17 +357,17 @@ export const gifts: Gift[] = [
   },
   {
   id: 50,
-  name: "Cooktop 4 Bocas Dako Supreme",
-  value: "R$ 525,90",
-  image: "https://http2.mlstatic.com/D_NQ_NP_2X_912486-MLA100063714741_122025-F.webp",
-  link: "https://www.mercadolivre.com.br/p/MLB23455094?matt_tool=38524122&pdp_filters=item_id:MLB6755799384&ua=t_XxhHatpycD4kEeDlTY0Xsf7isYxdM4wQ6vEQTG_5qfs_E#origin=share&sid=share&wid=MLB6755799384&action=copy",
-  },
-  {
-  id: 51,
   name: "Robô Aspirador Xiaomi Vacuum H50 Pro Branco 110v",
   value: "R$ 3.590",
   image: "https://http2.mlstatic.com/D_NQ_NP_2X_748329-MLA112254252799_052026-F.webp",
   link: "https://www.mercadolivre.com.br/p/MLB70270895?matt_tool=38524122&pdp_filters=item_id:MLB7541743470&ua=-X1DGSkJzDj179TIxBRe9eri0vehMsR0lBBtlPd7iljCB_8#origin=share&sid=share&wid=MLB7541743470&action=copy",
+  },
+  {
+  id: 51,
+  name: "Cooktop Indução 2 Bocas Oster Cor Preto",
+  value: "R$ 1.213,39",
+  image: "https://http2.mlstatic.com/D_NQ_NP_2X_751491-MLA100045469249_122025-F.webp",
+  link: "https://www.mercadolivre.com.br/p/MLB18711680?attributes=COLOR:MLB18711679,VOLTAGE:MLB18711680&matt_tool=38524122&pdp_filters=item_id:MLB4274542675&ua=NRCqBvNY3w-L7LAiYuvKmhPinoaYNbLkCcDk6YOJGyzmYxg#origin=share&sid=share&wid=MLB4274542675&action=copy",
   },
 ];
 
