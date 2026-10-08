@@ -362,5 +362,12 @@ export const gifts: Gift[] = [
   image: "https://http2.mlstatic.com/D_NQ_NP_2X_912486-MLA100063714741_122025-F.webp",
   link: "https://www.mercadolivre.com.br/p/MLB23455094?matt_tool=38524122&pdp_filters=item_id:MLB6755799384&ua=t_XxhHatpycD4kEeDlTY0Xsf7isYxdM4wQ6vEQTG_5qfs_E#origin=share&sid=share&wid=MLB6755799384&action=copy",
   },
+  {
+  id: 51,
+  name: "Robô Aspirador Xiaomi Vacuum H50 Pro Branco 110v",
+  value: "R$ 3.590",
+  image: "https://http2.mlstatic.com/D_NQ_NP_2X_748329-MLA112254252799_052026-F.webp",
+  link: "https://www.mercadolivre.com.br/p/MLB70270895?matt_tool=38524122&pdp_filters=item_id:MLB7541743470&ua=-X1DGSkJzDj179TIxBRe9eri0vehMsR0lBBtlPd7iljCB_8#origin=share&sid=share&wid=MLB7541743470&action=copy",
+  },
 ];
 
