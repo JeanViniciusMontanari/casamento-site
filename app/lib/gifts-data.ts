@@ -149,7 +149,7 @@ export const gifts: Gift[] = [
   {
     id: 20,
     name: "Aparelho De Jantar E Chá Unni Brisa Oxford 20 Peças - Cerâmica",
-    value: "R$ trocar",
+    value: "R$ 199,90",
     image: "https://www.havan.com.br/media/catalog/product/cache/820af7facfa7aca6eb3c138e3457dc8d/a/p/aparelho-de-jantar-e-cha-unni-brisa-oxford-20-pcs_1194991.webp",
     link: "https://www.havan.com.br/aparelho-de-jantar-e-cha-unni-brisa-oxford-20-pcs-cermica/p",
   },
@@ -274,10 +274,10 @@ export const gifts: Gift[] = [
   },
   {
     id: 38,
-    name: "Cooktop 4 Bocas Dako Supreme Com Mesa de Vidro e Tripla Chama Preto Bivol",
-    value: "R$ 488,05",
-    image: "https://http2.mlstatic.com/D_NQ_NP_2X_912486-MLA100063714741_122025-F.webp",
-    link: "https://www.mercadolivre.com.br/cooktop-4-bocas-dako-supreme-com-mesa-de-vidro-e-tripla-chama-preto-bivolt/p/MLB23455094",
+    name: "Cooktop a Gás Fischer 4 Bocas Tripla Chama Infinity",
+    value: "R$ 939,90",
+    image: "https://http2.mlstatic.com/D_NQ_NP_2X_844897-MLA99525717072_122025-F.webp",
+    link: "https://www.mercadolivre.com.br/p/MLB18950770?matt_tool=38524122&pdp_filters=item_id:MLB4973901672&ua=Z66MVRNzup1SRwnvoLNORJ5qYXeVJkionJD-rInffAYW-3k#origin=share&sid=share&wid=MLB4973901672&action=copy",
   },
   {
     id: 39,
@@ -344,9 +344,10 @@ export const gifts: Gift[] = [
   },
   {
   id: 48,
-  name: "Cama Box Casal",
-  value: "Medidas: 1,28 m × 1,88 m. Entre em contato com a noiva para mais informações sobre a cama box.",
-  image: "https://pub-c5dcb273a50946bb85510964e53ec939.r2.dev/consolidado-externos/corpo-9-atg0r9c3kn-7c3ee400.webp",
+  name: "Kit Personalizável Cama Baú + Colchão",
+  value: "R$ 6.033,99",
+  image: "https://eu-images.contentstack.com/v3/assets/blt167b24547e5b1906/blt4a192f7e79949f5c/676e88a69f31a939c9c617d0/BR_Cama-Bau-Emma_2024_gallery_5.png?format=auto&quality=80&width=2048&disable=upscale&crop=16:9",
+  link: "https://www.colchoesemma.com.br/kit-personalizavel-bau-colchao/sku-XEMBDSTB088188_00076/",
   },
   {
   id: 49,
@@ -368,6 +369,13 @@ export const gifts: Gift[] = [
   value: "R$ 1.213,39",
   image: "https://http2.mlstatic.com/D_NQ_NP_2X_751491-MLA100045469249_122025-F.webp",
   link: "https://www.mercadolivre.com.br/p/MLB18711680?attributes=COLOR:MLB18711679,VOLTAGE:MLB18711680&matt_tool=38524122&pdp_filters=item_id:MLB4274542675&ua=NRCqBvNY3w-L7LAiYuvKmhPinoaYNbLkCcDk6YOJGyzmYxg#origin=share&sid=share&wid=MLB4274542675&action=copy",
+  },
+  {
+  id: 52,
+  name: "Aspirador Vertical WAP POWER SPEED MAX",
+  value: "R$ 239,90",
+  image: "https://http2.mlstatic.com/D_NQ_NP_2X_773776-MLA106648864819_022026-F.webp",
+  link: "https://www.mercadolivre.com.br/aspirador-vertical-wap-power-speed-max-ci10-3-em-1-1600w-127v/p/MLB62021471?product_trigger_id=MLB62021471&attributes=COLOR%3ACinza%2CVOLTAGE%3AMLB62021471&pdp_filters=item_id%3AMLB6161133722&applied_product_filters=MLB62021471&picker=true&matt_tool=38524122&ua=WPBCykAikG10p1JrL20m1dJVgbHTtVgKSOjuIX4Vx857mPU&quantity=1",
   },
 ];
 

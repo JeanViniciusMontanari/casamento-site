@@ -554,7 +554,7 @@ export default function WeddingSite() {
             <span className="h-px w-16 sm:w-20 bg-gradient-to-r from-transparent via-[#d9b56f] to-[#d9b56f]" />
 
             <p className="text-[#d9b56f] text-base md:text-lg font-semibold tracking-wide drop-shadow-[0_4px_14px_rgba(0,0,0,0.58)]">
-              17:00 horas
+              16:30 horas
             </p>
 
             <span className="h-px w-16 sm:w-20 bg-gradient-to-l from-transparent via-[#d9b56f] to-[#d9b56f]" />
